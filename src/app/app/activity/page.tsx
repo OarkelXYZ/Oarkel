@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { ActivityList } from "@/components/app/Screens";
 import { BRAND } from "@/config/brand";
 import { pageMeta } from "@/lib/seo";
+import { poolLive } from "@/config/contracts";
+import { RealActivity } from "@/components/app/pool/RealScreens";
 
 export const metadata: Metadata = pageMeta({
   title: "Activity",
@@ -11,5 +13,5 @@ export const metadata: Metadata = pageMeta({
 });
 
 export default function Page() {
-  return <ActivityList />;
+  return poolLive() ? <RealActivity /> : <ActivityList />;
 }

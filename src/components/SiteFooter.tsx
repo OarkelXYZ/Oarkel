@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChainStrip } from "@/components/chain/ChainStrip";
 import { CopyCaBlock } from "@/components/CopyCa";
 import { BRAND, hasGithub } from "@/config/brand";
+import { poolLive } from "@/config/contracts";
 import { hasX } from "@/lib/seo";
 
 const COLUMNS: { title: string; links: { href: string; label: string; external?: boolean }[] }[] = [
@@ -18,7 +19,7 @@ const COLUMNS: { title: string; links: { href: string; label: string; external?:
     title: "Developers",
     links: [
       { href: "/docs", label: "Documentation" },
-      { href: "/docs/contracts", label: "Planned contracts" },
+      { href: "/docs/contracts", label: "Contracts" },
       { href: "/docs/trust-model", label: "Team powers" },
       ...(hasGithub ? [{ href: BRAND.github, label: "GitHub", external: true }] : []),
     ],
@@ -64,7 +65,9 @@ export function SiteFooter() {
         </div>
         <div className="mt-12 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <CopyCaBlock tone="night" className="w-full max-w-xl" />
-          <p className="font-mono text-[12px] text-white/50">Contracts not deployed · the app runs in practice mode</p>
+          <p className="font-mono text-[12px] text-white/50">
+            {poolLive() ? "Pool live on Robinhood Chain" : "Contracts written, not deployed yet · the app runs in practice mode"}
+          </p>
         </div>
         <div className="mt-10 flex flex-col gap-4 border-t border-white/10 pt-6 lg:flex-row lg:items-center lg:justify-between">
           <ChainStrip note={false} compact />

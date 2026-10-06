@@ -9,6 +9,8 @@ import { useWallet } from "@/components/wallet/WalletProvider";
 import { usePractice } from "@/components/app/PracticeProvider";
 import { CHAIN } from "@/config/brand";
 import { APP_NAV } from "@/components/site";
+import { poolLive } from "@/config/contracts";
+import { PoolGate } from "@/components/app/pool/PoolGate";
 
 const TABS = APP_NAV;
 
@@ -19,7 +21,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <h1 className="font-mono text-[15px] font-medium tracking-[-0.01em] text-fg">Private pool</h1>
-          <PracticeTag />
+          {poolLive() ? <LiveTag /> : <PracticeTag />}
         </div>
         <p className="font-mono text-[11.5px] text-fg-3">
           {CHAIN.name} · chain id {CHAIN.id}
@@ -43,7 +45,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         })}
       </nav>
       <div className="mt-8">
-        <Gate>{children}</Gate>
+        {poolLive() ? <PoolGate>{children}</PoolGate> : <Gate>{children}</Gate>}
       </div>
     </main>
   );
@@ -130,6 +132,10 @@ function Gate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function Card({ children }: { children: React.ReactNode }) {
+function LiveTag() {
+  return <span className="label inline-flex items-center gap-1.5 rounded-full bg-up/10 px-2 py-0.5 text-[10.5px] text-up">Live on chain</span>;
+}
+
+export function Card({ children }: { children: React.ReactNode }) {
   return <div className="mx-auto flex max-w-[448px] flex-col items-center rounded-[14px] border border-line-2 bg-paper px-6 py-10 text-center">{children}</div>;
 }

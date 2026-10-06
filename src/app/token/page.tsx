@@ -42,7 +42,7 @@ export default function TokenPage() {
           </h1>
           <p className="mt-5 max-w-2xl text-[18px] leading-relaxed text-white/60">
             {BRAND.symbol} is the token of {BRAND.name}, the privacy protocol for {CHAIN.name}. Held in a public wallet it is an ordinary
-            ERC-20. Shrouded into the private pool it becomes a note that, in the planned design, earns a share of every protocol fee.
+            ERC-20. Shrouded into the private pool it becomes a note that, by the pool contract&apos;s design, earns a share of every protocol fee.
           </p>
           {!token ? (
             <p className="mt-6 max-w-2xl rounded-[8px] border border-l-[3px] border-white/10 border-l-surge bg-white/[0.025] px-5 py-4 text-[15px] leading-relaxed">

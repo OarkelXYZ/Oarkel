@@ -1,0 +1,18 @@
+# Oarkel relayer. Config lives in relayer.conf (pool address, RPC, fees: nothing
+# secret); the hot wallet key is keys/relayer.key, readable only here.
+# Put it behind HTTPS (a reverse proxy) and give users the https URL.
+services:
+  relayer:
+    build: .
+    image: oarkel-relayer
+    restart: unless-stopped
+    env_file: relayer.conf
+    environment:
+      RELAYER_KEY_FILE: /run/relayer/relayer.key
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./keys:/run/relayer:ro
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "3" }

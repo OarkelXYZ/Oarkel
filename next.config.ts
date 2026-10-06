@@ -5,6 +5,8 @@ const nextConfig: NextConfig = {
   // The public repository carries no Markdown but its README.
   agentRules: false,
   images: { unoptimized: true },
+  // A second build (local end-to-end tests against a devnet) can live next to the main one.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
 };
 
 export default nextConfig;

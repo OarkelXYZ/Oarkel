@@ -39,7 +39,7 @@ function Status() {
   return null;
 }
 
-function AssetPick({ value, onChange }: { value: Asset; onChange: (a: Asset) => void }) {
+export function AssetPick({ value, onChange }: { value: Asset; onChange: (a: Asset) => void }) {
   return (
     <div role="radiogroup" aria-label="Asset" className="inline-grid grid-cols-2 rounded-full bg-card-2 p-1">
       {(["eth", "oarkel"] as Asset[]).map((a) => (
@@ -58,7 +58,7 @@ function AssetPick({ value, onChange }: { value: Asset; onChange: (a: Asset) => 
   );
 }
 
-function Panel({ title, children, aside }: { title: string; children: React.ReactNode; aside?: React.ReactNode }) {
+export function Panel({ title, children, aside }: { title: string; children: React.ReactNode; aside?: React.ReactNode }) {
   return (
     <section className="tile min-w-0 p-5 md:p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -70,7 +70,7 @@ function Panel({ title, children, aside }: { title: string; children: React.Reac
   );
 }
 
-function Row({ k, v, strong = false }: { k: string; v: React.ReactNode; strong?: boolean }) {
+export function Row({ k, v, strong = false }: { k: string; v: React.ReactNode; strong?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-4 border-b border-line py-2 text-[14.5px] last:border-b-0">
       <span className="text-fg-3">{k}</span>
@@ -112,7 +112,7 @@ export function Overview() {
             ))}
           </div>
           <p className="mt-4 text-[13.5px] leading-relaxed text-fg-3">
-            Only you see these numbers. In the planned pool, the chain would store your notes as commitments and nobody else could read
+            Only you see these numbers. In the real pool, the chain stores your notes only as commitments and nobody else can read
             them.
           </p>
         </Panel>
@@ -208,7 +208,7 @@ function AmountField({ asset, text, setText, max }: { asset: Asset; text: string
   );
 }
 
-function Summary({ rows }: { rows: [string, string][] }) {
+export function Summary({ rows }: { rows: [string, string][] }) {
   return (
     <div className="mt-5 rounded-[10px] bg-card-2 px-4 py-2">
       {rows.map(([k, v]) => (
@@ -218,7 +218,7 @@ function Summary({ rows }: { rows: [string, string][] }) {
   );
 }
 
-function formFrame(title: string, lede: string, form: React.ReactNode, side: React.ReactNode) {
+export function formFrame(title: string, lede: string, form: React.ReactNode, side: React.ReactNode) {
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
       <Panel title={title}>
@@ -230,7 +230,7 @@ function formFrame(title: string, lede: string, form: React.ReactNode, side: Rea
   );
 }
 
-function Explainer({ title, points }: { title: string; points: string[] }) {
+export function Explainer({ title, points }: { title: string; points: string[] }) {
   return (
     <section className="sheet ruled p-5 md:p-6">
       <h2 className="font-mono text-[15px] font-medium tracking-[-0.02em]">{title}</h2>
@@ -265,9 +265,9 @@ export function ShroudForm() {
       </div>
       <Summary
         rows={[
-          [`Shroud fee (${view.rules.shroudBps / 100}%, example)`, amount ? `${fmt(fee, 6)} ${NAME[asset]}` : "–"],
+          [`Shroud fee (${view.rules.shroudBps / 100}%)`, amount ? `${fmt(fee, 6)} ${NAME[asset]}` : "–"],
           ["New private note", amount ? `${fmt(Math.max(0, amount - fee), 6)} ${NAME[asset]}` : "–"],
-          ["Visible on chain (planned pool)", "your address and the amount"],
+          ["Visible on chain (real pool)", "your address and the amount"],
         ]}
       />
       {problem ? <p className="mt-3 text-[13.5px] text-down">{problem}</p> : null}
@@ -342,10 +342,10 @@ export function UnshroudForm() {
       </label>
       <Summary
         rows={[
-          ["Unshroud fee (flat, example)", `${fmt(fee, 6)} ${NAME[asset]}`],
-          ["Relayer fee (example)", relayer ? `${fmt(relay, 6)} ${NAME[asset]}` : "none"],
+          ["Unshroud fee (flat)", `${fmt(fee, 6)} ${NAME[asset]}`],
+          ["Relayer fee (suggested)", relayer ? `${fmt(relay, 6)} ${NAME[asset]}` : "none"],
           ["Recipient gets", amount ? `${fmt(amount, 6)} ${NAME[asset]}` : "–"],
-          ["Visible on chain (planned pool)", "recipient and amount, not the note"],
+          ["Visible on chain (real pool)", "recipient and amount, not the note"],
         ]}
       />
       {problem ? <p className="mt-3 text-[13.5px] text-down">{problem}</p> : null}
@@ -408,9 +408,9 @@ export function SendForm() {
       </label>
       <Summary
         rows={[
-          [`Transfer fee (${view.rules.transferBps / 100}%, example)`, amount ? `${fmt(fee, 6)} ${NAME[asset]}` : "–"],
+          [`Transfer fee (${view.rules.transferBps / 100}%)`, amount ? `${fmt(fee, 6)} ${NAME[asset]}` : "–"],
           ["Recipient gets a note of", amount ? `${fmt(amount, 6)} ${NAME[asset]}` : "–"],
-          ["Visible on chain (planned pool)", "that a transfer happened"],
+          ["Visible on chain (real pool)", "that a transfer happened"],
         ]}
       />
       {problem ? <p className="mt-3 text-[13.5px] text-down">{problem}</p> : null}
@@ -505,7 +505,7 @@ export function SettingsView() {
       <Panel title="Keys and storage">
         <div className="space-y-3 text-[14.5px] leading-relaxed text-fg-2">
           <p>
-            In the planned pool, your note keys come from one wallet signature, so the same wallet restores them anywhere.{" "}
+            In the real pool, your note keys come from one wallet signature, so the same wallet restores them anywhere.{" "}
             <Link href="/docs/keys" className="link text-fg">How keys work</Link>.
           </p>
           <p>
@@ -514,7 +514,7 @@ export function SettingsView() {
           </p>
         </div>
       </Panel>
-      <Panel title="Example rates used here">
+      <Panel title="Rates used here">
         <PracticeRates view={view} />
       </Panel>
     </div>
@@ -529,7 +529,7 @@ function PracticeRates({ view }: { view: PracticeView }) {
       <Row k="Private transfer fee" v={`${r.transferBps / 100}%`} />
       <Row k="Unshroud fee (flat)" v={`${fmt(r.unshroudFlat.eth, 6)} ETH · ${fmt(r.unshroudFlat.oarkel)} ${BRAND.ticker}`} />
       <Row k="Relayer fee" v={`${fmt(r.relayerFee.eth, 6)} ETH · ${fmt(r.relayerFee.oarkel)} ${BRAND.ticker}`} />
-      <p className="mt-3 text-[12.5px] leading-relaxed text-fg-3">Examples only. The real contracts&apos; rates are not set yet.</p>
+      <p className="mt-3 text-[12.5px] leading-relaxed text-fg-3">Same as the contract defaults the pool will be deployed with, fixed forever at deploy. Each relayer sets its own fee; this one is the app&apos;s suggestion.</p>
     </>
   );
 }

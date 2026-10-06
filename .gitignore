@@ -25,3 +25,9 @@ next-env.d.ts
 
 
 !.env.example
+
+# browser prover bundle and WASM copies (scripts/build-prover.mjs, run by prebuild)
+/public/zk/prover.js
+/public/zk/*.wasm
+/public/zk/*.wasm.gz
+/.next-e2e/

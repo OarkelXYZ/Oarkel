@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { BRAND, CHAIN, ONCHAIN, PONS } from "@/config/brand";
+import { BRAND, CHAIN, ONCHAIN, PONS, isAddress } from "@/config/brand";
+import { CONTRACTS } from "@/config/contracts";
 
 /**
  * Docs pages. Each page is a list of sections; every section heading becomes
  * an h2 with an anchor and an entry in the page's "On this page" list.
- * Nothing here describes deployed contracts: the pool is a planned design.
+ * Contract claims describe the written contracts in contracts/src. Nothing is
+ * deployed until the addresses in src/config/contracts.ts are filled in.
  */
 export type DocSection = { id: string; h: string; body: React.ReactNode };
 export type Doc = {
@@ -55,6 +57,9 @@ const Table = ({ head, rows }: { head: string[]; rows: React.ReactNode[][] }) =>
   </div>
 );
 
+/** An address cell: the address once it is set, otherwise a plain "not deployed" label. */
+const addrCell = (a: string, key: string, none = "Not deployed yet") => (isAddress(a) ? <code key={key}>{a}</code> : none);
+
 const T = BRAND.symbol;
 const N = BRAND.name;
 const C = CHAIN.name;
@@ -104,8 +109,8 @@ export const DOCS: Doc[] = [
               receive none of it.
             </li>
             <li>
-              <strong>No operator.</strong> The planned contracts have no admin keys and no upgrade path, so nobody can freeze or move a
-              note.
+              <strong>No operator.</strong> The pool contract has no owner, no admin function and no upgrade path, so nobody can freeze
+              or move a note.
             </li>
             <li>
               <strong>No gas wallet needed.</strong> A relayer can submit transactions for you and take its fee from the note.
@@ -119,8 +124,8 @@ export const DOCS: Doc[] = [
         body: (
           <>
             <p>
-              Be clear about this before anything else: <strong>the {N} pool and its proof system are not deployed.</strong> There is no
-              contract to deposit into, and the {T} contract address has not been published.
+              Be clear about this before anything else: <strong>the {N} contracts are written and tested, but not deployed.</strong> There
+              is no contract to deposit into yet, and the {T} contract address has not been published.
             </p>
             <p>What works today on this site:</p>
             <ul>
@@ -132,8 +137,9 @@ export const DOCS: Doc[] = [
               </li>
             </ul>
             <Callout tone="warn">
-              Any claim in these docs about immutability, missing admin keys or fees describes the contracts {N} intends to deploy. It
-              becomes a fact only when those contracts are live and verified on the explorer.
+              Any claim in these docs about immutability, the missing owner and admin function, or fees describes the contract code as
+              written. It becomes a fact on chain once those contracts are deployed, their addresses are published on the{" "}
+              <Link href="/docs/deployments">deployments page</Link> and the code is verified on the explorer.
             </Callout>
           </>
         ),
@@ -288,8 +294,8 @@ export const DOCS: Doc[] = [
         h: "3. Shroud something",
         body: (
           <p>
-            On the <strong>Shroud</strong> tab, pick ETH or {T}, enter an amount and sign. The practice pool takes the example shroud fee
-            and gives you a note with a fresh commitment. Your public practice balance drops; your private balance, visible only to you,
+            On the <strong>Shroud</strong> tab, pick ETH or {T}, enter an amount and sign. The practice pool takes the 0.25% shroud fee,
+            the contract default, and gives you a note with a fresh commitment. Your public practice balance drops; your private balance, visible only to you,
             rises.
           </p>
         ),
@@ -311,7 +317,7 @@ export const DOCS: Doc[] = [
         body: (
           <p>
             <strong>Send</strong> pays another practice account privately: they receive a new note and your note is spent.{" "}
-            <strong>Unshroud</strong> withdraws to any address you type, minus the flat example fee. Withdrawing to your own address puts
+            <strong>Unshroud</strong> withdraws to any address you type, minus the flat unshroud fee. Withdrawing to your own address puts
             the value back in your public practice balance.
           </p>
         ),
@@ -392,9 +398,12 @@ export const DOCS: Doc[] = [
           <>
             <p>A shroud is one transaction from your wallet to the pool:</p>
             <ol>
-              <li>Your browser creates a new note and its commitment locally.</li>
-              <li>You send ETH, or approve and send {T}, together with the commitment and the encrypted note.</li>
-              <li>The pool takes the shroud fee, appends the commitment to the note tree and emits it in an event.</li>
+              <li>Your browser picks a note owner hash and encrypts the note details to your own key.</li>
+              <li>You send ETH, or approve and send {T}, together with the owner hash and the encrypted note.</li>
+              <li>
+                The pool takes the shroud fee, computes the note commitment from the amount it actually received, appends it to the note
+                tree and emits it in an event.
+              </li>
             </ol>
             <p>
               Everyone can see that your address deposited a certain amount. From then on, nobody can see what that note does next.
@@ -479,8 +488,8 @@ export const DOCS: Doc[] = [
         h: "Proving a payment later",
         body: (
           <p>
-            Sometimes you need to show that you paid: an invoice, a dispute, an accountant. The planned design lets the sender produce a
-            payment receipt that reveals one transfer, its amount and its recipient, without exposing any other note.
+            Sometimes you need to show that you paid: an invoice, a dispute, an accountant. Payment receipts are planned for a later
+            release: the sender would produce a receipt that reveals one transfer, its amount and its recipient, and no other note.
           </p>
         ),
       },
@@ -493,9 +502,9 @@ export const DOCS: Doc[] = [
     group: `Using ${N}`,
     nav: "Fee schedule",
     h1: "Fee schedule",
-    lede: "Every fee source, its destination, and which numbers are still open.",
+    lede: "Every fee source, its rate, and where it goes.",
     title: "Fee Schedule",
-    description: `Every planned ${N} fee in one table: creator fee on ${T} trades, shroud fee, flat unshroud fee and private transfer fee, and where each one goes.`,
+    description: `Every ${N} fee in one table: creator fee on ${T} trades, 0.25% shroud fee, flat unshroud fee and 0.10% private transfer fee, and where each one goes.`,
     keyword: "privacy protocol fees",
     sections: [
       {
@@ -504,18 +513,20 @@ export const DOCS: Doc[] = [
         body: (
           <>
             <Table
-              head={["Fee", "Charged on", "Goes to", "Status"]}
+              head={["Fee", "Charged on", "Goes to", "Rate"]}
               rows={[
-                [`Creator fee`, `Every ${T} buy and sell on Pons`, "Harvested, mostly to buy back for the vault", "Planned"],
-                ["Shroud fee", "Each deposit into the pool", "Fee vault", "Planned"],
-                ["Unshroud fee", "Each withdrawal, flat amount", "Fee vault", "Planned"],
-                ["Private transfer fee", "Each payment inside the pool", "Fee vault", "Planned"],
-                ["Relayer fee", "Transactions sent through a relayer", "The relayer that paid the gas", "Optional"],
+                [`Creator fee`, `Every ${T} buy and sell on Pons`, "Harvested, mostly to buy back for the vault", "Set by Pons; harvesting planned"],
+                ["Shroud fee", "Each deposit into the pool", "Fee vault", "0.25%"],
+                ["Unshroud fee", "Each withdrawal, flat amount", "Fee vault", `0.0005 ETH or 20 ${T}`],
+                ["Private transfer fee", "Value sent to another key inside the pool", "Fee vault", "0.10%"],
+                ["Relayer fee", "Transactions sent through a relayer", "The relayer that paid the gas", "Set by each relayer, ETH only for now"],
               ]}
             />
             <Callout tone="warn">
-              No rate is final. Rates will be fixed in the contracts before launch and cannot change afterwards. The practice app uses
-              example rates, shown on each screen.
+              These are the values the pool will be deployed with. Every rate is a constructor argument, fixed forever at deploy, and the
+              contract refuses any fee above 5%. Fees paid in {T} raise the vault directly. Fees paid in ETH build up in the pool, anyone
+              can sweep them to the fee address fixed at deploy, and the operator of that address is expected to swap them into {T} and
+              donate them. That last step is operated off-chain, not enforced by code. The practice app uses the same rates.
             </Callout>
           </>
         ),
@@ -619,7 +630,8 @@ export const DOCS: Doc[] = [
 amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
             </pre>
             <p>
-              The small virtual offset is a standard guard against the share-inflation trick where a first depositor manipulates the rate.
+              The virtual offset (1,000,000 shares) is a standard guard against the share-inflation trick where a first depositor
+              manipulates the rate. A transfer fee paid in {T} burns shares instead, so each remaining share is backed by a little more.
             </p>
           </>
         ),
@@ -641,8 +653,10 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
         h: "What about shrouded ETH",
         body: (
           <p>
-            ETH notes stay ETH, one for one, so a shrouded ETH balance is exactly what you deposited minus fees. The fees ETH notes pay
-            are planned to be swapped into {T} and donated to the vault, so ETH activity feeds the yield of private {T} holders.
+            ETH notes stay ETH, one for one, so a shrouded ETH balance is exactly what you deposited minus fees, and it earns no yield.
+            The fees ETH notes pay build up in the pool; anyone can call <code>sweepEthFees()</code> to send them to the fee address
+            fixed at deploy, whose operator is expected to swap them into {T} and donate them to the vault. That swap is an operated,
+            off-chain step, not contract code.
           </p>
         ),
       },
@@ -677,8 +691,9 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
         body: (
           <p>
             Each Pons trade carries a creator fee owed to the launching wallet. For {T}, that fee is planned to be collected by a
-            harvester contract that swaps most of it into {T} and donates it to the vault, with a smaller share to the team. Until the
-            harvester exists, the routing is a commitment, not code, and the docs will say so.
+            fee harvester, operated off-chain, that swaps most of it into {T} and donates it to the vault through{" "}
+            <code>donate()</code>, with a smaller share to the team. Until the harvester runs, the routing is a commitment, not code,
+            and the docs will say so.
           </p>
         ),
       },
@@ -701,7 +716,7 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
         h: "Append-only by design",
         body: (
           <p>
-            Every new commitment, from shrouds, transfers and change outputs, is appended as the next leaf of a fixed-depth Merkle tree.
+            Every new commitment, from shrouds, transfers and change outputs, is appended as the next leaf of a Merkle tree of depth 24.
             Nothing is ever removed: spent notes stay in the tree and are excluded only by their nullifiers. That keeps an exit from
             revealing which leaf was spent.
           </p>
@@ -712,7 +727,7 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
         h: "Recent roots",
         body: (
           <p>
-            Each insertion produces a new root. The pool remembers a window of recent roots, so proofs made a few blocks earlier still
+            Each insertion produces a new root. The contract keeps a ring of the 100 most recent roots, so proofs made a few blocks earlier still
             verify. Which root a wallet chooses can itself leak timing; see the{" "}
             <Link href="/research/root-timing">root timing note</Link>.
           </p>
@@ -742,17 +757,19 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
             <li>Each published nullifier is computed correctly from its input note.</li>
             <li>Inputs equal outputs plus the public exit amount plus fees, for the same asset.</li>
             <li>Every output commitment is well formed.</li>
+            <li>The recipient, relayer and relayer fee match the transaction, through a hash of that data.</li>
           </ul>
         ),
       },
       {
         id: "choices",
-        h: "Design choices still open",
+        h: "Proof system",
         body: (
           <p>
-            The proving system, hash function and tree depth are being chosen for proving speed in a browser and verification cost on{" "}
-            {C}. They will be listed on the <Link href="/docs/parameters">parameters page</Link> once fixed, together with the circuit
-            source.
+            Written in Noir, the circuit spends two notes into two new ones. Your browser proves it with UltraHonk (Barretenberg)
+            in a web worker, in about four seconds. Hashes are Poseidon. There is no project-specific trusted setup: UltraHonk uses the
+            public Aztec Ignition reference string. The on-chain verifier, HonkVerifier, is generated from the circuit with its
+            verification key fixed in code. Every value is on the <Link href="/docs/parameters">parameters page</Link>.
           </p>
         ),
       },
@@ -767,7 +784,7 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
     h1: "Key derivation",
     lede: "How note keys are derived and what each one allows.",
     title: "Key Derivation",
-    description: `How ${N} derives spending and viewing keys from one wallet signature, so the same wallet restores your private notes on any device.`,
+    description: `How ${N} derives spending and viewing keys from one wallet signature and an optional passphrase, so the same wallet restores your private notes on any device.`,
     keyword: "viewing key spending key",
     sections: [
       {
@@ -775,9 +792,10 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
         h: "One signature, every key",
         body: (
           <p>
-            Your wallet signs a fixed message once. That signature is hashed into a seed, and the seed derives your note keys. Because the
-            same wallet always produces the same signature for the same message, you can restore your notes on a new device with nothing
-            to back up beyond the wallet itself.
+            Your wallet signs one Sign-In-with-Ethereum message for {BRAND.domain}. That signature, together with an optional passphrase
+            you choose, is hashed into a seed, and the seed derives your note keys. The keys live only in the memory of the open tab.
+            Because the same wallet always produces the same signature for the same message, you can restore your notes on a new device
+            with nothing to back up beyond the wallet itself and, if you set one, the passphrase.
           </p>
         ),
       },
@@ -800,7 +818,7 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
         h: "Sharing a viewing key",
         body: (
           <p>
-            Handing a viewing key to an auditor or tax adviser lets them read your history without being able to move funds. Scoped
+            Handing a viewing key to an accountant or tax adviser lets them read your history without being able to move funds. Scoped
             keys that reveal only a date range are on the <Link href="/docs/roadmap">roadmap</Link>.
           </p>
         ),
@@ -816,7 +834,7 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
     h1: "Relayers and gas",
     lede: "Using the pool without holding ETH for gas.",
     title: "Relayers and Gas",
-    description: `How ${N} relayers submit shroud and unshroud transactions and pay the gas, taking their fee from the note so your exit address needs no ETH.`,
+    description: `How ${N} relayers submit private transfers and unshrouds and pay the gas, taking their fee from the note so your exit address needs no ETH.`,
     keyword: "gasless relayer",
     sections: [
       {
@@ -835,8 +853,9 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
         body: (
           <p>
             You build the proof in your browser with the relayer&apos;s fee written into it, then hand the proof to a relayer. The relayer
-            submits the transaction and pays the gas; the pool pays the relayer its fee out of the spent note. The relayer cannot alter where
-            the money goes or how much, because both are bound into the proof.
+            submits the transaction and pays the gas; the pool pays the relayer its fee out of the spent note. Only the relayer named in the
+            proof can submit it, and it cannot alter where the money goes or how much, because the recipient, the relayer and the fee are
+            all bound into the proof.
           </p>
         ),
       },
@@ -845,8 +864,9 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
         h: "Anyone can relay",
         body: (
           <p>
-            Relaying is planned to be permissionless. If every relayer is down, you can still submit your own proof from any funded
-            wallet; you only lose the gas convenience, never access to your notes.
+            Relaying is permissionless. The relayer software is open source (<code>keeper/</code> in the repository), and anyone can run
+            one and set its own fee, in ETH for now. A spend without a relayer fee can be submitted by anyone, including your own wallet,
+            so if every relayer is down you only lose the gas convenience, never access to your notes.
           </p>
         ),
       },
@@ -861,7 +881,7 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
     h1: "Deployments",
     lede: `Contract addresses on ${C}, once there are any.`,
     title: "Deployments",
-    description: `Official ${N} deployment list for ${C}: pool, verifier, vault and ${T} addresses, plus the existing contracts the site reads from today.`,
+    description: `Official ${N} deployment list for ${C}: pool, proof verifier and ${T} addresses once live, plus the contracts the site reads today.`,
     keyword: "contract addresses",
     sections: [
       {
@@ -872,10 +892,10 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
             <Table
               head={["Contract", "Address", "Status"]}
               rows={[
-                [`${T} token`, "Not published", "Launch on Pons pending"],
-                ["Private pool", "Not deployed", "In design"],
-                ["Proof verifier", "Not deployed", "In design"],
-                ["Fee harvester", "Not deployed", "In design"],
+                [`${T} token`, addrCell(CONTRACTS.token, "t", "Not published"), isAddress(CONTRACTS.token) ? "Published" : "Launch on Pons pending"],
+                ["Private pool", addrCell(CONTRACTS.pool, "p"), isAddress(CONTRACTS.pool) ? "Deployed" : "Written and tested, not deployed"],
+                ["Proof verifier", addrCell(CONTRACTS.verifier, "v"), isAddress(CONTRACTS.verifier) ? "Deployed" : "Written and tested, not deployed"],
+                ["Fee harvester", "Off-chain", "Planned (operated off-chain)"],
               ]}
             />
             <Callout tone="warn">This table is the source of truth. Addresses posted anywhere else should be checked against it.</Callout>
@@ -916,26 +936,66 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
   {
     slug: "contracts",
     group: "Developers",
-    nav: "Planned contracts",
-    h1: "Planned contracts",
-    lede: "The interface the pool is being designed around. Subject to change until deployment.",
-    title: "Planned Contracts",
-    description: `The planned ${N} smart contract interface: pool functions for shroud, transact and unshroud, the events wallets index, and the errors to expect.`,
+    nav: "Contracts",
+    h1: "Contracts",
+    lede: "What the written pool contracts do: functions, events, errors and fixed settings. Not deployed yet.",
+    title: "Pool Contracts",
+    description: `The ${N} smart contracts: OarkelPool functions for shroud, transact and unshroud, events, errors, fixed parameters and how to verify them.`,
     keyword: "privacy pool smart contract",
     sections: [
+      {
+        id: "contracts",
+        h: "The contracts",
+        body: (
+          <>
+            <Table
+              head={["Contract", "Role"]}
+              rows={[
+                ["OarkelPool", "The pool and fee vault. No owner, no admin function, no pause, no proxy; every parameter set in the constructor"],
+                ["HonkVerifier", "UltraHonk proof verifier generated from the Noir circuit; verification key fixed in code"],
+                ["PoseidonT3, PoseidonT4", "Poseidon hash libraries the pool links to"],
+                ["ZKTranscriptLib, RelationsLib", "Libraries the verifier links to"],
+              ]}
+            />
+            <p>
+              The libraries and the verifier hold no state. The contracts are written and tested but <strong>not deployed yet</strong>;
+              their addresses will be published on the <Link href="/docs/deployments">deployments page</Link> once they are live.
+            </p>
+          </>
+        ),
+      },
       {
         id: "functions",
         h: "Pool functions",
         body: (
-          <Table
-            head={["Function", "Who calls it", "What it does"]}
-            rows={[
-              [<code key="1">shroud(asset, amount, commitment, encryptedNote)</code>, "Depositor", "Takes the deposit and fee, appends the commitment"],
-              [<code key="2">transact(proof, root, nullifiers, commitments, encryptedNotes, fee)</code>, "Anyone, usually a relayer", "Private transfer"],
-              [<code key="3">unshroud(proof, root, nullifiers, change, recipient, amount, relayerFee)</code>, "Anyone, usually a relayer", "Withdraws to the recipient"],
-              [<code key="4">donate(amount)</code>, "Anyone", `Adds ${T} to the vault backing`],
-            ]}
-          />
+          <>
+            <Table
+              head={["Function", "Who calls it", "What it does"]}
+              rows={[
+                [
+                  <code key="1">shroud(asset, amount, ownerHash, encryptedNote)</code>,
+                  "Depositor (payable)",
+                  `Takes ETH (asset 0) or ${T} (asset 1) minus the shroud fee; the pool computes the note commitment from the amount paid`,
+                ],
+                [
+                  <code key="2">transact(proof, args, ext)</code>,
+                  "The named relayer, or anyone when no relayer is paid",
+                  "Private send: two notes in, two out. Value sent to another key pays the transfer fee, enforced inside the proof",
+                ],
+                [
+                  <code key="3">unshroud(proof, args, ext)</code>,
+                  "The named relayer, or anyone when there is no relayer fee",
+                  "Withdraws to any address, minus the flat fee and an optional relayer fee",
+                ],
+                [<code key="4">donate(amount)</code>, "Anyone", `Adds ${T} to the vault backing`],
+                [<code key="5">sweepEthFees()</code>, "Anyone", "Sends accrued ETH fees to the fee address fixed at deploy"],
+              ]}
+            />
+            <p>
+              Read-only views: <code>isKnownRoot</code>, <code>getLastRoot</code>, <code>spentMany</code>, <code>valueOfShares</code>,{" "}
+              <code>previewShroudShares</code>, <code>state</code>, <code>extDataHash</code> and <code>zeros</code>.
+            </p>
+          </>
         ),
       },
       {
@@ -944,18 +1004,49 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
         body: (
           <ul>
             <li>
-              <code>NoteAdded(index, commitment, encryptedNote)</code>: one per new leaf; wallets scan these to find their notes.
+              <code>NewCommitment(commitment, leafIndex, encryptedNote)</code>: one per new leaf; wallets scan these to find their notes.
             </li>
             <li>
-              <code>NullifierSpent(nullifier)</code>: one per spent note.
+              <code>NewNullifier(nullifier)</code>: one per spent note.
             </li>
             <li>
-              <code>Unshrouded(recipient, asset, amount)</code>: the public side of an exit.
+              <code>Shrouded(asset, from, amount, fee, noteValue, leafIndex)</code>: the public side of a deposit.
             </li>
             <li>
-              <code>Donated(amount)</code>: fees reaching the vault.
+              <code>PrivateTransfer(asset, transferFee, relayer, relayerPaid)</code>: that a private send happened, and its fees.
+            </li>
+            <li>
+              <code>Unshrouded(asset, recipient, relayer, amountOut, relayerPaid, protocolFee)</code>: the public side of an exit.
+            </li>
+            <li>
+              <code>YieldAdded</code>, <code>SharesBurned</code>, <code>Donated</code>: {T} reaching the vault.
+            </li>
+            <li>
+              <code>EthFeeAccrued</code>, <code>EthFeesSwept</code>: ETH fees building up and leaving for the fee address.
             </li>
           </ul>
+        ),
+      },
+      {
+        id: "errors",
+        h: "Errors",
+        body: (
+          <Table
+            head={["Error", "When"]}
+            rows={[
+              [<code key="1">UnknownRoot</code>, "The proof names a root outside the last 100"],
+              [<code key="2">NullifierSpent, SameNullifier</code>, "A note was already spent, or both inputs are the same note"],
+              [<code key="3">InvalidProof</code>, "The verifier rejected the proof"],
+              [<code key="4">NotRelayer, BadRelayer</code>, "A relayer-paid spend sent by someone else, or a relayer fee with no relayer"],
+              [<code key="5">BadRecipient, ExitTooSmall</code>, "Missing or unexpected recipient, or an exit that does not cover its fees"],
+              [<code key="6">BadAmount, BadAsset</code>, "A zero or mismatched amount, or an asset other than 0 and 1"],
+              [<code key="7">NotInField, ValueTooLarge, NoteTooLarge</code>, "An input outside the proof field, a value above 2^120, an encrypted note over 512 bytes"],
+              [<code key="8">FeeOnTransferToken, ZeroShares</code>, "The token arrived short, or a shroud too small to mint a share"],
+              [<code key="9">TreeFull</code>, "All 2^24 leaves are used"],
+              [<code key="10">EthTransferFailed, NothingToSweep</code>, "An ETH payout failed, or there are no ETH fees to sweep"],
+              [<code key="11">BadParameter</code>, "The constructor refused a setting, such as a fee above 5%"],
+            ]}
+          />
         ),
       },
       {
@@ -963,10 +1054,31 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
         h: "What is deliberately missing",
         body: (
           <p>
-            No <code>owner</code>, no <code>upgradeTo</code>, no function that moves or freezes a note, and no fee setter. Parameters are
-            constructor arguments. A separate guardian may be able to stop new shrouds during a staged rollout; it is planned to have no
-            power over transfers or exits.
+            No <code>owner</code>, no admin function, no pause, no proxy and no <code>upgradeTo</code>, no function that moves or freezes
+            a note, and no fee setter. Every parameter is a constructor argument, fixed forever at deploy; the full list is on the{" "}
+            <Link href="/docs/parameters">parameters page</Link>.
           </p>
+        ),
+      },
+      {
+        id: "verify",
+        h: "Verify a deployment",
+        body: (
+          <>
+            <p>
+              Once addresses are published, anyone can check them against this code. From the repository, run{" "}
+              <code>npm run verify-deployment -- &lt;address&gt; --tx &lt;creation tx&gt;</code>. It compares the deployed bytecode byte
+              for byte with this build, checks each linked library the same way, decodes the fixed settings (verifier, token, fee address
+              and fees) and, with <code>--tx</code>, checks the creation input and constructor arguments. Any mismatch fails.
+            </p>
+            <p>
+              The verified source, every transaction and every event can also be read on{" "}
+              <a href={CHAIN.explorer} target="_blank" rel="noreferrer">
+                Blockscout
+              </a>
+              .
+            </p>
+          </>
         ),
       },
     ],
@@ -988,8 +1100,9 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
         h: "Wallets",
         body: (
           <p>
-            A wallet integration needs three things: key derivation from a signature, an indexer for <code>NoteAdded</code> events to find
-            the user&apos;s notes, and the prover to build proofs locally. A reference SDK is planned alongside the contracts.
+            A wallet integration needs three things: key derivation from a signature, an indexer for <code>NewCommitment</code> events to
+            find the user&apos;s notes, and the prover to build proofs locally. A reference SDK is planned; until then, this site&apos;s
+            own code is the reference.
           </p>
         ),
       },
@@ -1022,9 +1135,9 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
     group: "Safety",
     nav: "Team powers",
     h1: "Team powers and commitments",
-    lede: "Commitments from the team, its remaining powers, and the open questions.",
+    lede: "Commitments from the team, its remaining powers, and what is still pending.",
     title: "Team Powers",
-    description: `The ${N} trust model: no admin keys, no upgradeable proxy, exits that cannot be paused, honest labeling, and what remains unproven before launch.`,
+    description: `The ${N} trust model: a pool with no owner, no admin function and no proxy, exits nobody can pause, and what still waits on deployment.`,
     keyword: "no admin keys immutable",
     sections: [
       {
@@ -1032,8 +1145,8 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
         h: "Commitments",
         body: (
           <ul>
-            <li>No admin key over funds, and no upgradeable proxy on the pool.</li>
-            <li>No pause on private transfers or exits, ever. At most, new deposits can be capped during rollout.</li>
+            <li>No owner and no admin function in the pool contract, and no upgradeable proxy.</li>
+            <li>No pause on shrouds, private transfers or exits, ever: the contract has no pause function.</li>
             <li>No hidden team allocation; any team or seeded deposit is labeled.</li>
             <li>No promise of yield. Yield is whatever real fees produce, which can be nothing.</li>
             <li>No claim that deposits and withdrawals are hidden. They are public by nature.</li>
@@ -1047,8 +1160,8 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
           <Table
             head={["Will be able to", "Will not be able to"]}
             rows={[
-              ["Cap or halt new shrouds during rollout", "Pause transfers, exits or donations"],
-              ["Choose settings ahead of deployment", "Alter a setting once deployed"],
+              ["Choose the constructor settings before deployment", "Alter a setting once deployed"],
+              [`Receive swept ETH fees at the fee address and swap them into ${T} (expected, not enforced)`, "Pause shrouds, transfers, exits or donations"],
               ["Collect the team's portion of each creator fee", "Move, freeze or redirect any note"],
             ]}
           />
@@ -1056,11 +1169,12 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
       },
       {
         id: "unproven",
-        h: "Not proven yet",
+        h: "Not deployed yet",
         body: (
           <p>
-            Nothing is deployed, so none of the above is verifiable today. No third-party review has been done. These docs will link the
-            review, the verified source and the deployment block as each one happens.
+            The contracts are written and tested, but nothing is deployed, so none of the above can be checked on chain today. Once it
+            is, the <Link href="/docs/deployments">deployments page</Link> will list each address, and anyone can run{" "}
+            <code>npm run verify-deployment</code> to prove the bytecode matches this code.
           </p>
         ),
       },
@@ -1107,8 +1221,8 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
         body: (
           <p>
             An immutable contract cannot be patched. If a bug is found after launch, the only remedy is a new pool that users choose to
-            move to. Staged deposit caps, a public review and a bounty are planned to limit how much is exposed while the code earns
-            trust.
+            move to. The code is open source and tested, and anyone can check a deployment against it, but no check removes this risk.
+            Shroud only an amount whose loss you could carry.
           </p>
         ),
       },
@@ -1121,9 +1235,9 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
     group: "Reference",
     nav: "Parameters",
     h1: "Parameters",
-    lede: "The fixed values of the planned pool. Most are not decided yet.",
+    lede: "The fixed values of the pool contract, set once at deploy.",
     title: "Parameters",
-    description: `Planned ${N} pool parameters: assets, fee rates, root window, share offset and proof settings, with the status of each value before deployment.`,
+    description: `${N} pool parameters: assets, default fee rates, Merkle tree depth, root window, share offset and proof system, all fixed when the contract is deployed.`,
     keyword: "protocol parameters",
     sections: [
       {
@@ -1131,16 +1245,21 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
         h: "Values",
         body: (
           <Table
-            head={["Parameter", "Planned value", "Status"]}
+            head={["Parameter", "Value", "Status"]}
             rows={[
-              ["Assets", `ETH, ${T}`, "Decided"],
+              ["Assets", `ETH (0), ${T} (1)`, "In the code"],
               ["Network", `${C} (${CHAIN.id})`, "Decided"],
-              ["Shroud fee", "Small percentage", "To be set"],
-              ["Unshroud fee", "Flat amount per exit", "To be set"],
-              ["Private transfer fee", "Small percentage", "To be set"],
-              ["Recent roots accepted", "A rolling window", "To be set"],
-              ["Vault share offset", "Virtual offset against inflation attacks", "To be set"],
-              ["Proof system and hash", "Browser-friendly SNARK", "To be chosen"],
+              ["Shroud fee", "0.25%", "Deploy default"],
+              ["Private transfer fee", "0.10%", "Deploy default"],
+              ["Unshroud fee", `0.0005 ETH or 20 ${T}, flat`, "Deploy default"],
+              ["Maximum fee", "5% (500 bps)", "Enforced by the constructor"],
+              ["Relayer fee", "Set by each relayer, ETH only for now", "Bound into the proof"],
+              ["Merkle tree depth", "24", "In the code"],
+              ["Recent roots accepted", "100", "In the code"],
+              ["Largest note value", "2^120", "In the code"],
+              ["Vault share offset", "1,000,000 virtual shares", "In the code"],
+              ["Proof system and hash", "UltraHonk (Noir circuit), Poseidon; no project-specific trusted setup", "In the code"],
+              ["Fee address", "Fixed at deploy", "Not deployed yet"],
             ]}
           />
         ),
@@ -1150,8 +1269,8 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
         h: "Practice app values",
         body: (
           <p>
-            The practice app uses example values so the flow can be tried: a 0.25% shroud fee, a 0.10% private transfer fee and a flat
-            unshroud fee of 0.0005 ETH or 20 {T}. They are not proposals for the real contracts.
+            The practice app uses the same defaults: a 0.25% shroud fee, a 0.10% private transfer fee and a flat unshroud fee of 0.0005
+            ETH or 20 {T}, plus a suggested relayer fee of 0.0002 ETH or 8 {T}. Practice balances have no value.
           </p>
         ),
       },
@@ -1269,7 +1388,7 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
           <ul>
             <li>This site, live chain readings and the practice app.</li>
             <li>{T} launch on Pons, with the address published here first.</li>
-            <li>Contract and circuit design, written up in these docs.</li>
+            <li>Pool contracts and proof circuit, written and tested, documented in these docs.</li>
           </ul>
         ),
       },
@@ -1278,9 +1397,8 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
         h: "Next: the pool and its fee vault",
         body: (
           <ul>
-            <li>Private pool for ETH and {T}, with the fee vault and flat exit fee.</li>
-            <li>Public review, staged deposit caps and a bounty sized to the pool.</li>
-            <li>Fee harvester routing the creator fee into the vault.</li>
+            <li>Deploy the private pool for ETH and {T}, with the fee vault and flat exit fee, and publish every address here.</li>
+            <li>Fee harvester routing swept ETH fees and the creator fee into the vault, operated off-chain at first.</li>
           </ul>
         ),
       },
@@ -1289,7 +1407,7 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
         h: "Then: relayers and private settlement",
         body: (
           <ul>
-            <li>Permissionless relayers so no exit address ever needs gas.</li>
+            <li>Public relayers run by anyone with the open-source relayer, so no exit address ever needs gas.</li>
             <li>Payment receipts and scoped viewing keys for business use.</li>
           </ul>
         ),

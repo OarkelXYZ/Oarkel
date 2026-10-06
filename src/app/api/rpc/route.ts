@@ -49,11 +49,11 @@ function check(c: Call): Clean | string {
   if (c.params !== undefined && !Array.isArray(c.params)) return "params must be an array.";
   const params = (c.params as unknown[] | undefined) ?? [];
   if (c.method === "eth_call") {
-    // No state overrides (a third parameter) and no caller-chosen gas.
+    // No state overrides (a third parameter) and no caller-chosen gas. Data up to 12 KB covers a pool spend with its proof.
     if (params.length < 1 || params.length > 2) return "eth_call takes a call object and a block tag.";
     const call = params[0] as Record<string, unknown> | null;
     if (!call || typeof call !== "object" || !isAddr(call.to)) return "eth_call needs a contract address in `to`.";
-    if (call.data !== undefined && (typeof call.data !== "string" || !/^0x[0-9a-fA-F]*$/.test(call.data) || call.data.length > 8192)) {
+    if (call.data !== undefined && (typeof call.data !== "string" || !/^0x[0-9a-fA-F]*$/.test(call.data) || call.data.length > 24_576)) {
       return "eth_call data must be hex.";
     }
     if (call.from !== undefined && !isAddr(call.from)) return "eth_call from must be an address.";

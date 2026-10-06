@@ -1,0 +1,22 @@
+# Copy to relayer.conf on the server. Nothing here is secret; the key lives in keys/relayer.key.
+POOL_ADDRESS=
+RELAYER_RPC_URL=https://rpc.mainnet.chain.robinhood.com
+RELAYER_CHAIN_ID=4663
+RELAYER_PORT=8080
+# Fee floor in wei. The real minimum is estimated gas x gas price x RELAYER_GAS_MARGIN_PCT / 100.
+RELAYER_FEE_ETH_WEI=200000000000000
+RELAYER_GAS_MARGIN_PCT=150
+# Comma-separated origins allowed to call the relayer from a browser.
+RELAYER_ALLOWED_ORIGINS=https://oarkel.xyz,https://www.oarkel.xyz
+RELAYER_MAX_GAS=6000000
+RELAYER_MAX_PENDING=3
+RELAYER_MIN_BALANCE_WEI=2000000000000000
+RELAYER_PER_IP_PER_MIN=6
+RELAYER_MAX_PER_MIN=30
+# Set to 1 only behind your own reverse proxy that appends the client address to x-forwarded-for.
+RELAYER_TRUST_PROXY=0
+RELAYER_PROXY_HOPS=1
+# Share of relays expected to revert anyway, priced into every fee, and the hourly cap on reverted gas
+# after which the relayer pauses (5 minutes, doubling up to an hour).
+RELAYER_REVERT_ALLOWANCE_PCT=10
+RELAYER_MAX_REVERT_WEI_PER_HOUR=10000000000000000

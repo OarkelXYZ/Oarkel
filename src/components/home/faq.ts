@@ -22,28 +22,24 @@ export const HOME_FAQ: [string, string][] = [
     `${CHAIN.name} mainnet, chain id ${CHAIN.id}. ETH pays for gas there. Any EVM wallet that can add a custom network works, and this site adds the network for you when you connect.`,
   ],
   [
-    `Is ${BRAND.name} audited?`,
-    `Not yet. The pool and proof contracts are still being designed and have not been deployed, so there is nothing to audit today. The plan is a published third-party review before any deposit cap opens, and the report will be linked from the docs.`,
-  ],
-  [
     "Do public holders earn anything?",
     `No. Fees are designed to flow only to the vault behind shrouded ${BRAND.symbol}. A wallet that simply holds ${BRAND.symbol} in public gets no share of them. That gap is the reason to shroud.`,
   ],
   [
     "Who controls the contracts?",
-    "In the planned design, nobody. The pool is meant to ship without admin keys and without an upgrade path, so no team member could move, freeze or redirect a note. Those properties describe the contracts we intend to deploy; they are not live yet.",
+    "Nobody. The pool contract has no owner, no admin function, no pause and no proxy, and every parameter is fixed in its constructor, so no team member can move, freeze or redirect a note. The contracts are written and tested but not deployed yet; their addresses will be published in the docs once they are live.",
   ],
   [
     `Does ${BRAND.name} make me anonymous?`,
     `It conceals your balance and your counterparties inside the pool. Entering and leaving the pool remain public transactions, and your IP address, plus anything you tell other services, is outside its reach. The protection scales with the crowd: the more notes in the pool, the harder any one of them is to single out.`,
   ],
   [
-    "What are the fees?",
-    `The planned fee types are a creator fee on ${BRAND.symbol} trades, a small shroud fee, a flat unshroud fee and a private transfer fee. Exact rates are not set yet; they will be fixed in the contracts before launch and published in the docs. The practice app uses example rates so you can see how they behave.`,
+    "Which fees does Oarkel charge?",
+    `A creator fee on ${BRAND.symbol} trades, a 0.25% shroud fee, a 0.10% private transfer fee and a flat unshroud fee of 0.0005 ETH or 20 ${BRAND.symbol}. Those are the values the pool will be deployed with, and they are fixed forever at deploy; the contract refuses any fee above 5%. A relayer that pays your gas sets its own fee on top. The practice app uses the same rates.`,
   ],
   [
     "Do I need ETH to shroud or unshroud?",
-    "Not in the planned design. A relayer can submit the transaction and pay the gas, taking its fee out of the note itself, so the wallet that receives a withdrawal never has to be funded first.",
+    "To shroud, yes: you send that transaction from your own wallet. To unshroud or pay privately, no. A relayer can submit the transaction and pay the gas, taking its fee out of the note itself, so the wallet that receives a withdrawal never has to be funded first.",
   ],
   [
     "What are the risks?",

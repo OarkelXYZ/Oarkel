@@ -397,8 +397,8 @@ function PatchStage() {
     <pre className="w-full max-w-[320px] overflow-hidden rounded-[4px] border border-line-2 bg-paper p-4 font-mono text-[11.5px] leading-relaxed text-fg-2">
       <span className="text-fg">pool.upgradeTo()</span>
       {"\n"}→ function not found{"\n\n"}
-      <span className="text-fg">plan before deposits</span>
-      {"\n"}1. public review{"\n"}2. staged deposit caps{"\n"}3. bug bounty
+      <span className="text-fg">what you can check instead</span>
+      {"\n"}1. open source{"\n"}2. verify-deployment{"\n"}3. no admin function
     </pre>
   );
 }

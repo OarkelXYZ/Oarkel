@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { SendForm } from "@/components/app/Screens";
 import { BRAND } from "@/config/brand";
 import { pageMeta } from "@/lib/seo";
+import { poolLive } from "@/config/contracts";
+import { RealSend } from "@/components/app/pool/RealScreens";
 
 export const metadata: Metadata = pageMeta({
   title: "Send Privately",
@@ -11,5 +13,5 @@ export const metadata: Metadata = pageMeta({
 });
 
 export default function Page() {
-  return <SendForm />;
+  return poolLive() ? <RealSend /> : <SendForm />;
 }

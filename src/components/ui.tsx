@@ -28,8 +28,8 @@ export function Redact({ w = 6, sweep = false, className = "" }: { w?: number; s
   );
 }
 
-/** "Planned design" tag for claims about contracts that are not deployed yet. */
-export function Planned({ children = "Planned design", tone = "paper" }: { children?: React.ReactNode; tone?: "paper" | "night" }) {
+/** "Contract design" tag for claims that describe what the written contracts do (true in the code, live only once deployed). */
+export function Planned({ children = "Contract design", tone = "paper" }: { children?: React.ReactNode; tone?: "paper" | "night" }) {
   return (
     <span
       className={`label inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10.5px] ${

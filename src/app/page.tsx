@@ -161,8 +161,8 @@ function Yield() {
           ))}
         </dl>
         <p className="mx-auto mt-8 max-w-[1100px] font-mono text-[11.5px] leading-relaxed text-fg-3">
-          Planned design. Rates are not final and yield can be zero: it is paid from real fees, never printed. Shrouded ETH pays fees into
-          the vault too; in the planned design the yield itself accrues to shrouded {S}.
+          Contract design. Default rates: 0.25% to shroud, 0.10% per private transfer, a flat 0.0005 ETH or 20 {S} to unshroud, fixed at
+          deploy. Yield can be zero: it is paid from real fees, never printed. Only shrouded {S} earns; ETH fees are swept and swapped into it.
         </p>
       </section>
     </div>
@@ -372,28 +372,28 @@ function GetToken() {
 const GUARANTEES: Guarantee[] = [
   {
     title: "No key can freeze a note.",
-    text: "The pool is designed with no admin role over user funds. At most, new deposits could be capped or halted; private payments and exits keep working no matter what.",
-    tag: "planned",
+    text: "The pool contract has no owner and no admin function. No one is able to lock a note, halt the pool or redirect a payment; shrouds, private payments and exits always work.",
+    tag: "in the code",
   },
   {
     title: "Your browser proves it.",
-    text: "Your browser builds the zero-knowledge proof. Your notes and keys never leave it; only the proof and a nullifier go on-chain.",
-    tag: "planned",
+    text: "Your browser builds the zero-knowledge proof in about four seconds. Your notes and keys never leave it; only the proof and nullifiers go on-chain.",
+    tag: "in the code",
   },
   {
     title: "A relayer can pay the gas.",
-    text: "Shroud and unshroud can be sent by a relayer that covers gas and takes its fee from the note, so a fresh address never needs funding first.",
-    tag: "planned",
+    text: "A private payment or an unshroud can be sent by a relayer that covers gas and takes its fee from the note, so a fresh address never needs funding first. The fee is bound into the proof.",
+    tag: "in the code",
   },
   {
     title: "One signature, all keys.",
     text: "Note keys are derived from a signature by your wallet. Sign again on any device and they come back: there is no seed file to back up.",
-    tag: "planned",
+    tag: "in the code",
   },
   {
     title: "Immutable, by design.",
-    text: "No proxy and no upgrade path, so a bug cannot be patched. That is why the plan is a public review, staged deposit caps and a bounty before real value goes in.",
-    tag: "planned",
+    text: "No proxy and no upgrade path; every parameter is fixed when the pool is deployed. A bug cannot be patched, so the code is open source and anyone can check the deployed bytecode against it.",
+    tag: "in the code",
   },
   {
     title: "Private holders get paid.",
@@ -410,8 +410,8 @@ function Design() {
           Built so that nobody, including us, can touch a note.
         </h2>
         <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-fg-2">
-          These are the rules the {BRAND.name} contracts are being written to. They describe contracts that are not deployed yet, and each
-          one will be checkable on the explorer the day they are.
+          These are the rules the {BRAND.name} contracts are written to. The contracts are written and tested but not deployed yet; each
+          rule will be checkable on the explorer the day they are.
         </p>
       </div>
       <div className="mt-12 lg:mt-0">
