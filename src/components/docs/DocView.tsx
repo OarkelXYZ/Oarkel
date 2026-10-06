@@ -1,37 +1,10 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, CaretDown } from "@phosphor-icons/react/dist/ssr";
+import { CopyPage, DocsSidebar, DocsToc } from "@/components/docs/DocsChrome";
 import { JsonLd } from "@/components/JsonLd";
 import { DOCS, docHref, type Doc } from "@/components/docs/content";
 import { BRAND } from "@/config/brand";
 import { breadcrumbs } from "@/lib/seo";
-
-function DocNav({ doc }: { doc: Doc }) {
-  const groups = [...new Set(DOCS.map((d) => d.group))];
-  return (
-    <>
-      {groups.map((g) => (
-        <div key={g} className="mb-6">
-          <p className="label mb-2 text-fg-3">{g}</p>
-          <ul className="border-l border-line">
-            {DOCS.filter((d) => d.group === g).map((d) => (
-              <li key={d.slug}>
-                <Link
-                  href={docHref(d.slug)}
-                  aria-current={d === doc ? "page" : undefined}
-                  className={`-ml-px block border-l-2 py-1.5 pl-3 text-[14.5px] transition-colors ${
-                    d === doc ? "border-surge font-semibold text-fg" : "border-transparent text-fg-2 hover:border-line-2 hover:text-fg"
-                  }`}
-                >
-                  {d.nav}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </>
-  );
-}
 
 export function DocView({ doc }: { doc: Doc }) {
   const i = DOCS.indexOf(doc);
@@ -54,47 +27,53 @@ export function DocView({ doc }: { doc: Doc }) {
       mainEntityOfPage: url,
     },
   ];
+  const items = DOCS.map((d) => ({ slug: d.slug, href: docHref(d.slug), nav: d.nav, group: d.group, h1: d.h1 }));
+  const toc = doc.sections.map((s) => ({ id: s.id, h: s.h }));
   return (
-    <main id="main" className="wrap py-10 md:py-14">
+    <main id="main" className="mx-auto w-full max-w-[1248px] px-4 pt-[104px] pb-24 md:pt-[112px]">
       {data.map((d, n) => (
         <JsonLd key={n} data={d} />
       ))}
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-14">
-        <aside className="min-w-0">
-          <details className="group tile lg:hidden">
-            <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-[14.5px] font-semibold [&::-webkit-details-marker]:hidden">
+      <div className="flex gap-10 xl:gap-12">
+        <aside className="sticky top-24 hidden max-h-[calc(100vh-112px)] w-[260px] shrink-0 self-start overflow-y-auto pr-2 lg:block">
+          <DocsSidebar items={items} current={doc.slug} />
+        </aside>
+        <article className="min-w-0 flex-1 lg:max-w-[656px]">
+          <details className="group mb-8 rounded-[10px] border border-white/10 bg-white/[0.02] lg:hidden">
+            <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 font-mono text-[12.5px] [&::-webkit-details-marker]:hidden">
               <span>
-                Docs: <span className="font-normal text-fg-2">{doc.nav}</span>
+                Docs <span className="text-fg-3">/ {doc.nav}</span>
               </span>
               <CaretDown size={14} className="transition-transform group-open:rotate-180" />
             </summary>
-            <nav aria-label="Docs pages" className="border-t border-line px-4 pt-4">
-              <DocNav doc={doc} />
-            </nav>
+            <div className="border-t border-white/10 px-2 pt-4 pb-3">
+              <DocsSidebar items={items} current={doc.slug} />
+            </div>
           </details>
-          <nav aria-label="Docs sections" className="sticky top-24 hidden max-h-[calc(100dvh-7rem)] overflow-y-auto pr-2 lg:block">
-            <DocNav doc={doc} />
-          </nav>
-        </aside>
-        <article className="min-w-0 max-w-[760px]">
-          <p className="label text-surge">{doc.group}</p>
-          <h1 className="display mt-3 text-[40px] leading-[1.05] md:text-[52px]">{doc.h1}</h1>
-          <p className="mt-4 text-[19px] leading-relaxed text-fg-2">{doc.lede}</p>
-          {doc.sections.length > 1 ? (
-            <nav aria-label="On this page" className="mt-7 border-y border-line py-4">
-              <p className="label text-fg-3">On this page</p>
-              <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1.5 text-[14.5px]">
-                {doc.sections.map((s) => (
-                  <li key={s.id}>
-                    <a href={`#${s.id}`} className="link text-fg-2 hover:text-fg">
-                      {s.h}
+          {doc.slug ? <p className="font-mono text-[11px] tracking-[0.3em] text-white/45 uppercase">{doc.group}</p> : null}
+          <h1 className={`font-mono text-[30px] leading-[1.15] font-medium tracking-[-0.025em] text-fg md:text-[36px] ${doc.slug ? "mt-3" : ""}`}>
+            {doc.h1}
+          </h1>
+          <p className="mt-4 text-[18px] leading-relaxed text-white/60">{doc.lede}</p>
+          <div className="mt-7">
+            <CopyPage />
+          </div>
+          <hr className="mt-8 border-white/10" />
+          {toc.length > 1 ? (
+            <details className="mt-8 rounded-[10px] border border-white/10 bg-white/[0.02] px-4 py-3 xl:hidden">
+              <summary className="cursor-pointer font-mono text-[11px] tracking-[0.25em] text-white/55 uppercase">On this page</summary>
+              <ul className="mt-3 flex flex-col gap-1.5 text-[14px]">
+                {toc.map((t) => (
+                  <li key={t.id}>
+                    <a href={`#${t.id}`} className="text-white/70 hover:text-white">
+                      {t.h}
                     </a>
                   </li>
                 ))}
               </ul>
-            </nav>
+            </details>
           ) : null}
-          <div className="prose-ok mt-2">
+          <div className="prose-ok">
             {doc.sections.map((s) => (
               <section key={s.id} aria-labelledby={s.id}>
                 <h2 id={s.id}>{s.h}</h2>
@@ -102,27 +81,32 @@ export function DocView({ doc }: { doc: Doc }) {
               </section>
             ))}
           </div>
-          <nav className="mt-16 grid grid-cols-1 gap-3 border-t border-fg pt-6 sm:grid-cols-2" aria-label="Previous and next page">
+          <nav className="mt-16 grid grid-cols-1 gap-3 border-t border-white/10 pt-6 sm:grid-cols-2" aria-label="Previous and next page">
             {prev ? (
-              <Link href={docHref(prev.slug)} className="tile group flex flex-col px-4 py-3.5 transition-colors hover:bg-card-2">
-                <span className="flex items-center gap-1 text-[12.5px] text-fg-3">
+              <Link href={docHref(prev.slug)} className="group flex flex-col rounded-[8px] border border-white/10 px-4 py-3.5 transition-colors hover:border-white/25">
+                <span className="flex items-center gap-1 font-mono text-[11.5px] text-white/50">
                   <ArrowLeft size={12} /> Previous
                 </span>
-                <span className="mt-0.5 font-semibold group-hover:text-surge">{prev.nav}</span>
+                <span className="mt-1 text-[15px] text-fg">{prev.nav}</span>
               </Link>
             ) : (
               <span className="hidden sm:block" />
             )}
             {next ? (
-              <Link href={docHref(next.slug)} className="tile group flex flex-col items-end px-4 py-3.5 text-right transition-colors hover:bg-card-2">
-                <span className="flex items-center gap-1 text-[12.5px] text-fg-3">
+              <Link href={docHref(next.slug)} className="group flex flex-col items-end rounded-[8px] border border-white/10 px-4 py-3.5 text-right transition-colors hover:border-white/25">
+                <span className="flex items-center gap-1 font-mono text-[11.5px] text-white/50">
                   Next <ArrowRight size={12} />
                 </span>
-                <span className="mt-0.5 font-semibold group-hover:text-surge">{next.nav}</span>
+                <span className="mt-1 text-[15px] text-fg">{next.nav}</span>
               </Link>
             ) : null}
           </nav>
         </article>
+        {toc.length > 1 ? (
+          <aside className="sticky top-24 hidden w-[220px] shrink-0 self-start xl:block">
+            <DocsToc items={toc} />
+          </aside>
+        ) : null}
       </div>
     </main>
   );

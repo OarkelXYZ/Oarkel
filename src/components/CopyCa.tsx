@@ -45,10 +45,10 @@ export function CopyCaTag({ className = "" }: { className?: string }) {
       title={live ? `Copy ${BRAND.ca}` : "The contract address is published at launch"}
       aria-label={live ? `${BRAND.symbol} ${shortAddress(BRAND.ca, 4, 4)}, copy contract address` : `${BRAND.symbol} At launch: contract address not published yet`}
       data-testid="ca-tag"
-      className={`num inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-dashed border-line-2 bg-card px-3 text-[12.5px] text-fg-2 transition-colors enabled:hover:border-fg enabled:hover:text-fg disabled:cursor-default ${className}`}
+      className={`num inline-flex h-[33px] shrink-0 items-center gap-1.5 rounded-full border border-line-2 px-3 text-[11.5px] text-fg-2 transition-colors enabled:hover:border-[#ffffff47] enabled:hover:text-fg disabled:cursor-default ${className}`}
     >
-      <span className="font-semibold text-fg sm:hidden">CA</span>
-      <span className="hidden font-semibold text-fg sm:inline">{BRAND.symbol}</span>
+      <span className="font-medium text-fg sm:hidden">CA</span>
+      <span className="hidden font-medium text-fg sm:inline">{BRAND.symbol}</span>
       <span className="hidden whitespace-nowrap sm:inline">{!live ? "At launch" : copied ? "Copied" : shortAddress(BRAND.ca, 4, 4)}</span>
       {!live ? null : copied ? <Check size={13} className="text-up" weight="bold" /> : <Copy size={13} />}
     </button>
@@ -61,7 +61,7 @@ export function CopyCaBlock({ className = "", tone = "paper" }: { className?: st
   const night = tone === "night";
   return (
     <div
-      className={`rounded-[12px] border px-4 py-3.5 ${night ? "border-night-3 bg-night-2 text-mist" : "border-line bg-card text-fg"} ${className}`}
+      className={`rounded-[4px] border px-4 py-3.5 ${night ? "border-night-3 bg-night-2 text-mist" : "border-line bg-card text-fg"} ${className}`}
       data-testid="ca-block"
     >
       <p className={`label ${night ? "text-mist-3" : "text-fg-3"}`}>
@@ -75,7 +75,7 @@ export function CopyCaBlock({ className = "", tone = "paper" }: { className?: st
           type="button"
           onClick={copy}
           disabled={!live}
-          className={`${night ? "btn-ghost" : "btn-ink"} inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold`}
+          className={`${night ? "btn-ghost" : "btn-ink"} inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-4 font-mono text-[12px]`}
           data-testid="ca-copy"
         >
           {copied ? <Check size={14} weight="bold" /> : <Copy size={14} />}

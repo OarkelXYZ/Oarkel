@@ -24,8 +24,8 @@ export type Doc = {
 
 const Callout = ({ children, tone = "note" }: { children: React.ReactNode; tone?: "note" | "warn" }) => (
   <div
-    className={`not-prose mt-6 rounded-[10px] border-l-4 px-4 py-3.5 text-[15px] leading-relaxed ${
-      tone === "warn" ? "border-surge bg-surge-soft/60 text-fg" : "border-fg bg-card-2 text-fg-2"
+    className={`not-prose mt-8 rounded-[8px] border border-l-[3px] border-white/10 bg-white/[0.025] px-5 py-4 text-[15.5px] leading-relaxed ${
+      tone === "warn" ? "border-l-surge text-fg" : "border-l-white/50 text-white/80"
     }`}
   >
     {children}

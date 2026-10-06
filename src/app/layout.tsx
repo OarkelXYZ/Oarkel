@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans, Newsreader } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { JsonLd } from "@/components/JsonLd";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -9,9 +9,8 @@ import { WalletProvider } from "@/components/wallet/WalletProvider";
 import { BRAND, hasGithub } from "@/config/brand";
 import { OG_IMAGE, hasX } from "@/lib/seo";
 
-const newsreader = Newsreader({ subsets: ["latin"], weight: ["400", "500", "600"], style: ["normal", "italic"], variable: "--font-newsreader", display: "swap" });
-const plexSans = IBM_Plex_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-plex-sans", display: "swap" });
-const plexMono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-plex-mono", display: "swap" });
+const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-inter", display: "swap" });
+const jetbrains = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-jetbrains", display: "swap" });
 
 // "<Name> | <slogan>" fits in 65 characters, so the slogan is the title phrase.
 const TITLE = `${BRAND.name} | ${BRAND.slogan}`;
@@ -44,7 +43,7 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = { themeColor: "#eeebe3", viewportFit: "cover" };
+export const viewport: Viewport = { themeColor: "#050506", viewportFit: "cover" };
 
 const sameAs = [...(hasX ? [BRAND.x] : []), ...(hasGithub ? [BRAND.github] : [])];
 
@@ -73,12 +72,12 @@ const ORG = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${newsreader.variable} ${plexSans.variable} ${plexMono.variable}`}>
-      <body className="overflow-x-hidden font-sans text-[15px] antialiased">
+    <html lang="en" className={`${inter.variable} ${jetbrains.variable}`}>
+      <body className="overflow-x-clip font-sans text-[16px] antialiased">
         <JsonLd data={ORG} />
         <WalletProvider>
           <WalletModalProvider>
-            <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[90] focus:rounded focus:bg-fg focus:px-3 focus:py-2 focus:text-paper">
+            <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[200] focus:rounded focus:bg-fg focus:px-3 focus:py-2 focus:text-paper">
               Skip to content
             </a>
             <SiteHeader />

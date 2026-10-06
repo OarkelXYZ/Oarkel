@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { ChainStrip } from "@/components/chain/ChainStrip";
 import { CopyCaBlock } from "@/components/CopyCa";
-import { XGlyph } from "@/components/icons";
-import { Wordmark } from "@/components/Mark";
-import { BRAND, CHAIN, hasGithub } from "@/config/brand";
+import { BRAND, hasGithub } from "@/config/brand";
 import { hasX } from "@/lib/seo";
 
 const COLUMNS: { title: string; links: { href: string; label: string; external?: boolean }[] }[] = [
@@ -28,64 +26,66 @@ const COLUMNS: { title: string; links: { href: string; label: string; external?:
   {
     title: BRAND.name,
     links: [
-      { href: "/token", label: `Get ${BRAND.symbol}` },
+      { href: "/token", label: `${BRAND.symbol} token` },
       { href: "/#faq", label: "FAQ" },
-      { href: "/app", label: "Open the app" },
-      ...(hasX ? [{ href: BRAND.x, label: `X ${BRAND.xHandle}`, external: true }] : []),
+      { href: "/app", label: "Launch app" },
     ],
   },
 ];
 
+const linkCls = "text-[14px] leading-5 text-[#ededed] underline-offset-4 decoration-white/40 transition-colors duration-150 hover:underline";
+
 export function SiteFooter() {
   return (
-    <footer className="night mt-0 bg-night text-mist">
-      <div className="wrap grid grid-cols-1 gap-10 pt-16 pb-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.6fr)]">
-        <div className="min-w-0">
-          <Wordmark className="text-mist" />
-          <p className="mt-4 max-w-sm text-[14.5px] leading-relaxed text-mist-2">
-            {BRAND.name} is a {BRAND.category} for {CHAIN.name}. {BRAND.slogan}
-          </p>
-          <CopyCaBlock tone="night" className="mt-6 max-w-md" />
-        </div>
-        <div className="grid min-w-0 grid-cols-2 gap-8 sm:grid-cols-3">
+    <footer className="dither-footer">
+      <div className="dither-footer-bg" aria-hidden="true" />
+      <div className="relative mx-auto w-full max-w-[1152px] px-4 pt-16 md:px-4">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-3 md:gap-8">
           {COLUMNS.map((col) => (
-            <div key={col.title} className="min-w-0">
-              <p className="label text-mist-3">{col.title}</p>
-              <ul className="mt-4 flex flex-col gap-2.5 text-[14.5px]">
-                {col.links.map((l) =>
-                  l.external ? (
-                    <li key={l.href}>
-                      <a href={l.href} target="_blank" rel="noreferrer" className="text-mist-2 transition-colors hover:text-mist">
+            <nav key={col.title} aria-label={col.title} className="min-w-0">
+              <p className="font-mono text-[12px] leading-4 text-white/60 uppercase">{col.title}</p>
+              <ul className="mt-5 flex flex-col gap-3.5">
+                {col.links.map((l) => (
+                  <li key={l.href}>
+                    {l.external ? (
+                      <a href={l.href} target="_blank" rel="noreferrer" className={linkCls}>
                         {l.label}
                       </a>
-                    </li>
-                  ) : (
-                    <li key={l.href}>
-                      <Link href={l.href} className="text-mist-2 transition-colors hover:text-mist">
+                    ) : (
+                      <Link href={l.href} className={linkCls}>
                         {l.label}
                       </Link>
-                    </li>
-                  ),
-                )}
+                    )}
+                  </li>
+                ))}
               </ul>
-            </div>
+            </nav>
           ))}
         </div>
-      </div>
-      <div className="border-t border-night-3">
-        <div className="wrap flex flex-col gap-4 py-6 lg:flex-row lg:items-center lg:justify-between">
-          <ChainStrip tone="night" />
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-mist-3">
-            <span>Contracts not deployed · app runs in practice mode</span>
+        <div className="mt-12 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <CopyCaBlock tone="night" className="w-full max-w-xl" />
+          <p className="font-mono text-[12px] text-white/50">Contracts not deployed · the app runs in practice mode</p>
+        </div>
+        <div className="mt-10 flex flex-col gap-4 border-t border-white/10 pt-6 lg:flex-row lg:items-center lg:justify-between">
+          <ChainStrip note={false} compact />
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[12px] text-white/60">
+            {hasGithub ? (
+              <a href={BRAND.github} target="_blank" rel="noreferrer" className="transition-colors hover:text-white">
+                GitHub
+              </a>
+            ) : null}
             {hasX ? (
-              <a href={BRAND.x} target="_blank" rel="noreferrer" aria-label={`${BRAND.name} on X`} className="text-mist-2 hover:text-mist">
-                <XGlyph size={15} />
+              <a href={BRAND.x} target="_blank" rel="noreferrer" aria-label={`${BRAND.name} on X (${BRAND.xHandle})`} className="transition-colors hover:text-white">
+                X
               </a>
             ) : null}
             <span className="whitespace-nowrap">© 2026 {BRAND.domain}</span>
           </div>
         </div>
       </div>
+      <p className="footer-wordmark relative mt-10" aria-hidden="true">
+        OARKEL
+      </p>
     </footer>
   );
 }

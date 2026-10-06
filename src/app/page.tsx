@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
+import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import { ChainStrip } from "@/components/chain/ChainStrip";
-import { CopyCaBlock } from "@/components/CopyCa";
 import { HOME_FAQ } from "@/components/home/faq";
-import { YieldExample } from "@/components/home/YieldExample";
+import { CopyCaInline, Guarantees, HowSteps, TraceGraph, type Guarantee, type Step } from "@/components/home/Interactive";
 import { JsonLd } from "@/components/JsonLd";
-import { Planned, Redact } from "@/components/ui";
+import { SlatMark } from "@/components/Mark";
 import { BRAND, CHAIN } from "@/config/brand";
 
 const faqLd = {
@@ -20,10 +19,9 @@ export default function Home() {
       <JsonLd data={faqLd} />
       <Hero />
       <HowItWorks />
-      <Compare />
+      <Trace />
       <Yield />
-      <WhoShrouds />
-      <BuiltOnPool />
+      <Uses />
       <GetToken />
       <Design />
       <Faq />
@@ -36,180 +34,74 @@ export default function Home() {
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden border-b border-line">
-      <div className="wrap grid grid-cols-1 items-center gap-12 pt-14 pb-12 md:pt-20 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:pb-16">
-        <div className="min-w-0">
-          <h1 className="display text-[44px] leading-[1.02] text-fg sm:text-[60px] lg:text-[72px]">
-            <span className="block text-surge">{BRAND.name}.</span>{" "}
-            <span className="block">Public Chain.</span>{" "}
-            <span className="block italic">Private Balance.</span>
-          </h1>
-          <p className="mt-6 max-w-xl text-[18px] leading-relaxed text-fg-2">
-            {BRAND.name} is a privacy protocol for {CHAIN.name}. {BRAND.tagline.replace(" Immutable. No admin.", "")} The contracts are
-            designed to be immutable, with no admin.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Link href="/app" className="btn-ink inline-flex h-12 items-center gap-2 rounded-full px-6 text-[15px] font-semibold">
-              Try it in practice <ArrowRight size={16} />
-            </Link>
-            <Link href="/docs" className="btn-ghost inline-flex h-12 items-center rounded-full px-6 text-[15px] font-semibold">
-              Read the docs
-            </Link>
-          </div>
-          <p className="mt-5 max-w-xl text-[13px] leading-relaxed text-fg-3">
-            The private pool is not deployed yet. The app runs the whole shroud, hold and unshroud flow in practice mode, signed by your
-            wallet, with no funds moving.
-          </p>
-        </div>
-        <LedgerSlip />
+    <section className="hero">
+      <div className="hero-glow" aria-hidden="true" />
+      <div className="hero-grain" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-x-0 top-[9%] flex justify-center md:top-[30%] md:-translate-y-[0%]" aria-hidden="true">
+        <SlatMark id="hero" animate size={null} className="h-auto w-[52vw] max-w-[340px] text-white/[0.075]" />
       </div>
-      <div className="border-t border-line bg-card/60">
-        <div className="wrap py-4">
-          <ChainStrip />
+      <div className="relative mt-auto px-6 pt-[40vh] pb-16 md:px-12 md:pt-[46vh] md:pb-12">
+        <div className="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-[460px]">
+            <h1 className="reveal-up font-mono text-[30px] leading-[36px] font-medium tracking-[-0.025em] text-fg md:text-[36px] md:leading-[40px]">
+              <span className="block text-fg-2">{BRAND.name}.</span>
+              <span className="block">Public chain.</span>
+              <span className="block">Private balance.</span>
+            </h1>
+            <p className="reveal-up mt-4 text-[18px] leading-7 text-pretty text-fg/75" style={{ animationDelay: "0.12s" }}>
+              {BRAND.name} is a privacy protocol for {CHAIN.name}. Shroud ETH or {BRAND.symbol}, keep a balance nobody else can read, and
+              collect a share of the fees.
+            </p>
+            <div className="reveal-up mt-8 flex flex-wrap items-center gap-x-5 gap-y-4 md:gap-6" style={{ animationDelay: "0.22s" }}>
+              <Link href="/app" className="btn-ink inline-flex h-11 items-center rounded-full px-6 text-[14px] font-medium md:px-7">
+                Try it in practice
+              </Link>
+              <Link href="/#how-it-works" className="group inline-flex items-center gap-2 font-mono text-[13px] text-fg/70 md:text-[14px] transition-colors hover:text-fg">
+                See how it works <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            </div>
+          </div>
+          <ChainStrip note={false} className="reveal-up max-w-[520px] lg:justify-end" />
         </div>
       </div>
     </section>
   );
 }
 
-/** A wallet's public record, with the private values blacked out in turn. */
-function LedgerSlip() {
-  const rows: [string, string, string][] = [
-    ["Balance", "ETH", "3.4210"],
-    ["Balance", BRAND.symbol, "182,400.00"],
-    ["Paid", "to 0x9b3e…11af", "0.8000 ETH"],
-    ["Received", "from 0x52c1…0d7e", "24,000 OARKEL"],
-    ["Paid", "to 0xa77f…6c02", "1.2500 ETH"],
-  ];
-  return (
-    <div className="relative min-w-0">
-      <div className="sheet ruled relative overflow-hidden px-5 pt-5 pb-6 shadow-[0_30px_60px_-30px_rgb(22_24_29/0.45)] md:px-7">
-        <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-fg pb-3">
-          <p className="num text-[13px] text-fg">wallet 0x7f3a…c21e</p>
-        </div>
-        <ul className="mt-1">
-          {rows.map(([kind, what, value], i) => (
-            <li key={i} className="grid grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-3 border-b border-line py-[9px] text-[14px]">
-              <span className="text-fg-3">{kind}</span>
-              <span className="num truncate text-fg-2">{what}</span>
-              <span className="num relative text-right text-fg">
-                <span className="invisible">{value}</span>
-                <span className="absolute inset-0 flex items-center justify-end">
-                  <span className="relative">
-                    <span className="opacity-0">{value}</span>
-                    <span className="redact redact-sweep absolute inset-y-[3px] right-0 left-0 h-auto" style={{ animationDelay: `${i * 0.35}s` }} />
-                  </span>
-                </span>
-              </span>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-4 text-[13px] leading-relaxed text-fg-3">
-          What an explorer shows for this wallet after shrouding: the deposit is still there. The balance and the payments behind it read as a commitment hash.
-        </p>
-        <span
-          aria-hidden="true"
-          className="label absolute top-3.5 right-5 z-10 rotate-[-6deg] bg-card rounded-[4px] border-2 border-surge px-2.5 py-1 text-[13px] font-medium tracking-[0.18em] text-surge opacity-90"
-        >
-          shrouded
-        </span>
-      </div>
-    </div>
-  );
-}
-
 /* ------------------------------------------------------------------ */
 
-function SectionHead({ id, kicker, title, lede, night = false }: { id?: string; kicker: string; title: string; lede?: string; night?: boolean }) {
-  return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-      <p id={id} className={`label pt-3 ${night ? "text-ember" : "text-surge"}`}>
-        {kicker}
-      </p>
-      <div className="min-w-0">
-        <h2 className={`display text-[34px] leading-[1.08] md:text-[46px] ${night ? "text-mist" : "text-fg"}`}>{title}</h2>
-        {lede ? <p className={`mt-4 max-w-2xl text-[17px] leading-relaxed ${night ? "text-mist-2" : "text-fg-2"}`}>{lede}</p> : null}
-      </div>
-    </div>
-  );
-}
+const STEPS: Step[] = [
+  {
+    n: "01",
+    title: "Shroud.",
+    text: `Deposit ETH or ${BRAND.symbol} into the shared pool. What you get back is a note only your keys can open.`,
+  },
+  {
+    n: "02",
+    title: "Hold.",
+    text: `Shrouded ${BRAND.symbol} owns a slice of the fee vault, and every fee raises its worth. Public wallets get none of it.`,
+  },
+  {
+    n: "03",
+    title: "Spend or unshroud.",
+    text: "Pay someone inside the pool, or withdraw to an address you pick. A zero-knowledge proof shows the funds are yours without naming the note.",
+  },
+];
 
 function HowItWorks() {
-  const steps = [
-    {
-      n: "01",
-      title: "Shroud",
-      text: `Deposit ETH or ${BRAND.symbol} into the private pool. The deposit itself is a normal public transaction, but what comes back is a private note: an encrypted record of your balance that only your keys can open.`,
-      art: (
-        <div className="flex flex-wrap items-center gap-2 text-[13px]">
-          <span className="num rounded-full border border-line-2 bg-card px-3 py-1">0x7f3a…c21e · 2.00 ETH</span>
-          <ArrowRight size={14} className="text-fg-3" />
-          <span className="num inline-flex items-center gap-2 rounded-full bg-fg px-3 py-1 text-paper">
-            note <Redact w={5} className="bg-paper" />
-          </span>
-        </div>
-      ),
-    },
-    {
-      n: "02",
-      title: "Hold",
-      text: `Leave the note in the pool. Shrouded ${BRAND.symbol} carries a share of the fee vault, and every protocol fee that lands there raises what each share is worth. Holding in a public wallet earns none of it.`,
-      art: (
-        <div className="flex items-end gap-1.5" aria-hidden="true">
-          {[22, 26, 29, 33, 38, 42, 47, 53].map((h, i) => (
-            <span key={i} className="w-4 rounded-t-[2px] bg-fg" style={{ height: h, opacity: 0.35 + i * 0.08 }} />
-          ))}
-          <span className="ml-2 text-[13px] text-fg-3">share value, as fees arrive</span>
-        </div>
-      ),
-    },
-    {
-      n: "03",
-      title: "Spend or unshroud",
-      text: "Pay someone inside the pool without a public trail, or pull the value out to whichever address you pick. A zero-knowledge proof convinces the contract the money is yours without saying which note it came from.",
-      art: (
-        <div className="flex flex-wrap items-center gap-2 text-[13px]">
-          <span className="num inline-flex items-center gap-2 rounded-full bg-fg px-3 py-1 text-paper">
-            note <Redact w={5} className="bg-paper" />
-          </span>
-          <ArrowRight size={14} className="text-fg-3" />
-          <span className="rounded-full border border-surge px-3 py-1 text-surge">proof checks out</span>
-          <ArrowRight size={14} className="text-fg-3" />
-          <span className="num rounded-full border border-line-2 bg-card px-3 py-1">any address</span>
-        </div>
-      ),
-    },
-  ];
   return (
-    <section className="border-b border-line py-20 md:py-28" aria-labelledby="how-title">
-      <div className="wrap">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-          <p id="how-it-works" className="label pt-3 text-surge">
-            How it works
-          </p>
-          <div className="min-w-0">
-            <h2 id="how-title" className="display text-[34px] leading-[1.08] md:text-[46px]">
-              Shroud, hold, then spend: three moves from public to private
-            </h2>
-            <p className="mt-4 max-w-2xl text-[17px] leading-relaxed text-fg-2">
-              On {CHAIN.name}, like on every public chain, anyone can paste your address into an explorer and read your balance and every
-              payment you have made. {BRAND.name} gives you a second place to keep value, where the chain can check the math but cannot read
-              the numbers.
-            </p>
-          </div>
-        </div>
-        <ol className="mt-14 border-t border-fg">
-          {steps.map((s) => (
-            <li key={s.n} className="grid grid-cols-1 gap-5 border-b border-line py-9 md:grid-cols-[220px_minmax(0,1fr)] lg:grid-cols-[220px_minmax(0,1fr)_minmax(0,0.9fr)]">
-              <p className="display text-[56px] leading-none text-surge">{s.n}</p>
-              <div className="min-w-0">
-                <h3 className="display text-[30px] leading-tight">{s.title}</h3>
-                <p className="mt-3 max-w-xl text-[16px] leading-relaxed text-fg-2">{s.text}</p>
-              </div>
-              <div className="flex min-w-0 items-center md:col-start-2 lg:col-start-3">{s.art}</div>
-            </li>
-          ))}
-        </ol>
+    <section id="how-it-works" className="relative pt-28 pb-20 md:pt-36 md:pb-28" aria-labelledby="how-title">
+      <div className="dot-grid fade-y pointer-events-none absolute inset-0 opacity-60" aria-hidden="true" />
+      <div className="wrap-narrow relative">
+        <p className="eyebrow">01 / How it works</p>
+        <h2 id="how-title" className="h2-mono mt-4">
+          Shroud, hold, spend: three moves to a private balance.
+        </h2>
+        <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-fg-2">
+          On {CHAIN.name}, as on every public chain, anyone can paste your address into an explorer and read your balance and every payment
+          you have made. {BRAND.name} adds a second place to keep value, where the chain can check the math but cannot read the numbers.
+        </p>
+        <HowSteps steps={STEPS} />
       </div>
     </section>
   );
@@ -217,243 +109,211 @@ function HowItWorks() {
 
 /* ------------------------------------------------------------------ */
 
-function Compare() {
-  const publicRows: [string, string, string][] = [
-    ["0x7f3a…c21e", "182,400 OARKEL", "paid 0x9b3e…11af"],
-    ["0x9b3e…11af", "41,050 OARKEL", "paid 0x52c1…0d7e"],
-    ["0x52c1…0d7e", "9,800 OARKEL", "tagged: exchange"],
-  ];
+function Trace() {
   return (
-    <section className="night bg-night py-20 text-mist md:py-28" aria-labelledby="compare-title">
-      <div className="wrap">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-          <p className="label pt-3 text-ember">What changes</p>
-          <div className="min-w-0">
-            <h2 id="compare-title" className="display text-[34px] leading-[1.08] md:text-[46px]">
-              A public token is a public diary. A private note is a sealed envelope.
-            </h2>
-            <p className="mt-4 max-w-2xl text-[17px] leading-relaxed text-mist-2">
-              The difference is not what you own but who can read it. Once one of your addresses is linked to your name, by an exchange
-              withdrawal or a single tagged payment, a public token tells that story to everyone. A shrouded balance does not.
-            </p>
-          </div>
-        </div>
-        <div className="mt-14 grid grid-cols-1 gap-5 lg:grid-cols-2">
-          <div className="tile min-w-0 p-5 md:p-6">
-            <p className="label text-mist-3">Ordinary ERC-20 · readable by anyone</p>
-            <div className="table-scroll">
-              <table className="w-full min-w-[420px] text-left text-[13.5px]">
-                <thead>
-                  <tr className="text-mist-3">
-                    <th className="py-2 pr-3 font-normal">Holder</th>
-                    <th className="py-2 pr-3 font-normal">Balance</th>
-                    <th className="py-2 font-normal">Last move</th>
-                  </tr>
-                </thead>
-                <tbody className="num">
-                  {publicRows.map((r) => (
-                    <tr key={r[0]} className="border-t border-night-3">
-                      <td className="py-2.5 pr-3">{r[0]}</td>
-                      <td className="py-2.5 pr-3">{r[1]}</td>
-                      <td className="py-2.5 text-mist-2">{r[2]}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="mt-4 text-[14px] leading-relaxed text-mist-2">
-              Every balance and every transfer is a permanent public row. Follow one tagged address and the rest of the chain unravels.
-            </p>
-          </div>
-          <div className="tile min-w-0 p-5 md:p-6">
-            <p className="label text-ember">Shrouded with {BRAND.name} · readable by the owner</p>
-            <div className="table-scroll">
-              <table className="w-full min-w-[420px] text-left text-[13.5px]">
-                <thead>
-                  <tr className="text-mist-3">
-                    <th className="py-2 pr-3 font-normal">Holder</th>
-                    <th className="py-2 pr-3 font-normal">Balance</th>
-                    <th className="py-2 font-normal">Last move</th>
-                  </tr>
-                </thead>
-                <tbody className="num">
-                  {["0x1c8e…a90b", "0x6d02…44f1", "0xe5b7…19c3"].map((c) => (
-                    <tr key={c} className="border-t border-night-3">
-                      <td className="py-2.5 pr-3 text-mist-2">commitment {c}</td>
-                      <td className="py-2.5 pr-3">
-                        <Redact w={9} />
-                      </td>
-                      <td className="py-2.5">
-                        <Redact w={10} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="mt-4 text-[14px] leading-relaxed text-mist-2">
-              The chain stores commitments, which look alike. Who owns each one, how much it holds and where it went stay with the keys.
-            </p>
-          </div>
-        </div>
-        <p className="mt-8 max-w-3xl text-[15px] leading-relaxed text-mist-2">
-          One honest limit: the deposit that enters the pool and the withdrawal that leaves it are public transactions. {BRAND.name} hides the
-          path between them, which is why exits are designed to land on any fresh address and why a larger crowd in the pool protects
-          everyone in it.
+    <section className="relative bg-paper pt-16 pb-6 md:pt-24" aria-labelledby="trace-title">
+      <div className="wrap-narrow">
+        <p className="eyebrow">What changes when you shroud</p>
+        <h2 id="trace-title" className="h2-mono mt-3">
+          A public diary, then a sealed envelope.
+        </h2>
+        <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-fg-2">
+          The difference is not what you own but who can read it. Once one of your addresses is tied to your name, through an exchange
+          withdrawal or one tagged payment, a public token tells the whole story. A shrouded balance does not.
         </p>
       </div>
+      <TraceGraph />
     </section>
   );
 }
 
 /* ------------------------------------------------------------------ */
+
+const S = BRAND.symbol;
 
 function Yield() {
-  const sources: [string, string][] = [
-    [`Creator fee on ${BRAND.symbol} trades`, "A cut of the launchpad creator fee on every buy and sell is routed to buy back for the vault."],
-    ["Shroud fee", "A small fee taken when value enters the pool."],
-    ["Unshroud fee", "A flat fee per withdrawal, so the fee reveals nothing about the note's size or age."],
-    ["Private transfer fee", "A small fee on payments made inside the pool."],
-  ];
   return (
-    <section className="border-b border-line py-20 md:py-28" aria-labelledby="yield-title">
-      <div className="wrap">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-          <p id="yield" className="label pt-3 text-surge">
-            Holder yield
-          </p>
-          <div className="min-w-0">
-            <h2 id="yield-title" className="display text-[34px] leading-[1.08] md:text-[46px]">
-              Private holders earn the protocol fees. Public holders earn nothing.
-            </h2>
-            <p className="mt-4 max-w-2xl text-[17px] leading-relaxed text-fg-2">
-              This is the part most privacy tools leave out: a reason to stay private. Every fee the protocol takes is designed to flow into
-              one vault, and the vault belongs to shrouded {BRAND.symbol}. The more activity the protocol sees, the more each private share is
-              worth. It is passive yield that needs no staking step and no claim button.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-14 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-3">
-              <h3 className="text-[18px] font-semibold">Where the fees come from</h3>
-              <Planned />
-            </div>
-            <ul className="mt-4 border-t border-fg">
-              {sources.map(([t, d]) => (
-                <li key={t} className="grid grid-cols-1 gap-1 border-b border-line py-4 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] sm:gap-6">
-                  <p className="font-semibold text-fg">{t}</p>
-                  <p className="text-[15px] leading-relaxed text-fg-2">{d}</p>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center">
-              <div className="rounded-[10px] bg-fg px-4 py-3 text-paper">
-                <p className="label text-paper/60">Fee vault</p>
-                <p className="mt-1 text-[14.5px]">Fees land here as {BRAND.symbol} backing. No new shares are minted.</p>
-              </div>
-              <ArrowRight size={18} className="mx-auto rotate-90 text-fg-3 sm:rotate-0" />
-              <div className="grid grid-cols-1 gap-2">
-                <div className="rounded-[10px] border border-up/40 bg-card px-4 py-2.5">
-                  <p className="text-[14px] font-semibold text-up">Private {BRAND.symbol} notes</p>
-                  <p className="text-[13px] text-fg-2">Each share is now backed by more {BRAND.symbol}.</p>
-                </div>
-                <div className="rounded-[10px] border border-line-2 bg-card px-4 py-2.5">
-                  <p className="text-[14px] font-semibold text-fg-3">Public wallets</p>
-                  <p className="text-[13px] text-fg-3">Same balance as before.</p>
-                </div>
-              </div>
-            </div>
-            <p className="mt-6 text-[14px] leading-relaxed text-fg-3">
-              Rates are not final and yield can be zero: it is paid from real fees, never printed. Shrouded ETH pays fees into the vault
-              too; in the planned design the yield itself accrues to shrouded {BRAND.symbol}.
-            </p>
-          </div>
-          <YieldExample />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-
-function WhoShrouds() {
-  const who: [string, string, string][] = [
-    [
-      "A",
-      "Traders",
-      `Hold ${BRAND.symbol} in a private note instead of a watched wallet, so a position cannot be copied, front-run or used against you, and collect fee yield while you wait.`,
-    ],
-    [
-      "B",
-      "Privacy-minded holders",
-      "Keep savings on-chain without publishing them. Paying a friend or a merchant no longer hands them a full view of your net worth and history.",
-    ],
-    [
-      "C",
-      "Institutions",
-      `Settle on ${CHAIN.name} without broadcasting treasury size, counterparties or timing to competitors, and withdraw to a fresh address when a payment must be public.`,
-    ],
-    [
-      "D",
-      "Communities",
-      "Launch a privacy coin into the same pool instead of a new one. Every coin that joins adds to one shared crowd, and a bigger crowd makes each note harder to single out.",
-    ],
-  ];
-  return (
-    <section className="border-b border-line py-20 md:py-28">
-      <div className="wrap">
-        <SectionHead kicker="Who it is for" title="Who shrouds, and what they get out of it" />
-        <dl className="mt-14 grid grid-cols-1 border-t border-l border-line md:grid-cols-2">
-          {who.map(([k, t, d]) => (
-            <div key={k} className="min-w-0 border-r border-b border-line bg-card/50 p-6 md:p-8">
-              <dt className="flex items-baseline gap-3">
-                <span className="display text-[28px] text-surge">{k}.</span>
-                <span className="display text-[26px]">{t}</span>
-              </dt>
-              <dd className="mt-3 text-[15.5px] leading-relaxed text-fg-2">{d}</dd>
+    <div className="relative">
+      <section id="yield" className="wrap relative py-24 md:py-32" aria-labelledby="yield-title">
+        <header className="mb-12 border-t border-line pt-6 md:mb-16">
+          <p className="eyebrow">02 / Holder yield</p>
+          <h2 id="yield-title" className="h2-wide mt-4 max-w-2xl">
+            Fees go to private holders. Public holders get nothing.
+          </h2>
+        </header>
+        <p className="mb-6 max-w-3xl text-[16px] leading-relaxed text-fg-2 md:mb-8">
+          This is the part most privacy tools leave out: a reason to stay private. Every fee the protocol takes is designed to flow into one
+          vault, and the vault belongs to shrouded {S}. More activity means each private share is worth more. It is passive yield with no
+          staking step and no claim button.
+        </p>
+        <YieldDiagram />
+        <dl className="mx-auto mt-10 grid max-w-[1100px] grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            [`Creator fee on ${S} trades`, "A cut of the launchpad creator fee on every buy and sell is harvested to buy back for the vault."],
+            ["Shroud fee", "A small fee taken when value enters the pool."],
+            ["Unshroud fee", "A flat fee per exit, so the fee says nothing about the note's size or age."],
+            ["Private transfer fee", "A small fee on payments made inside the pool."],
+          ].map(([t, d]) => (
+            <div key={t} className="min-w-0 border-t border-line pt-4">
+              <dt className="font-mono text-[13px] font-medium text-fg">{t}</dt>
+              <dd className="mt-1.5 text-[14px] leading-relaxed text-fg-2">{d}</dd>
             </div>
           ))}
         </dl>
-      </div>
-    </section>
+        <p className="mx-auto mt-8 max-w-[1100px] font-mono text-[11.5px] leading-relaxed text-fg-3">
+          Planned design. Rates are not final and yield can be zero: it is paid from real fees, never printed. Shrouded ETH pays fees into
+          the vault too; in the planned design the yield itself accrues to shrouded {S}.
+        </p>
+      </section>
+    </div>
   );
 }
 
-function BuiltOnPool() {
-  const items: [string, string, string][] = [
-    ["Relayer support", "Next", "A relayer sends the shroud or unshroud transaction on your behalf and covers gas, recovering its fee from the note. The receiving wallet never needs ETH."],
-    ["Private settlement", "Next", `Desks and treasuries settle with each other inside the pool on ${CHAIN.name}, then exit only what must be shown.`],
-    ["Private swaps", "Later", `Swap shrouded value for other ${CHAIN.name} assets with no visible link between what went in and what came out.`],
-    ["Community privacy coins", "Later", "New coins launch straight into the shared pool, so every launch grows the crowd for everyone already in it."],
-  ];
+function YieldDiagram() {
+  const box = (l: number, t: number, w: number, h: number) => ({ "--l": `${l}%`, "--t": `${t}%`, "--w": `${w}%`, "--h": `${h}%` }) as React.CSSProperties;
   return (
-    <section className="border-b border-line py-20 md:py-24" aria-labelledby="built-title">
-      <div className="wrap grid grid-cols-1 gap-10 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <p className="label pt-3 text-surge">On the roadmap</p>
-        <div className="min-w-0">
-          <h2 id="built-title" className="display text-[34px] leading-[1.08] md:text-[42px]">
-            One shared pool, with more built on top of it
-          </h2>
-          <p className="mt-4 max-w-2xl text-[17px] leading-relaxed text-fg-2">
-            The pool comes first. These are the pieces planned around it, in order. None of them is live yet.
-          </p>
-          <ul className="mt-10 border-t border-fg">
-            {items.map(([t, when, d]) => (
-              <li key={t} className="grid grid-cols-1 gap-2 border-b border-line py-5 md:grid-cols-[minmax(0,0.8fr)_80px_minmax(0,1.6fr)] md:gap-6">
-                <p className="text-[17px] font-semibold">{t}</p>
-                <p className="label pt-1 text-fg-3">{when}</p>
-                <p className="text-[15.5px] leading-relaxed text-fg-2">{d}</p>
-              </li>
+    <div className="yield-diagram">
+      <div className="yield-flow" role="img" aria-label={`How trading and private activity add value to shrouded ${S}`}>
+        <svg className="yield-lines" viewBox="0 0 1100 540" preserveAspectRatio="none" aria-hidden="true">
+          <path id="yp-in" d="M140 95 L390 95" />
+          <path id="yp-out" d="M710 95 L960 95" />
+          <path id="yp-fa" d="M245 132 L245 303 Q245 315 257 315 L488 315 Q500 315 500 327 L500 345" />
+          <path id="yp-fb" d="M550 290 L550 345" />
+          <path id="yp-fc" d="M855 132 L855 303 Q855 315 843 315 L612 315 Q600 315 600 327 L600 345" />
+          <path id="yp-t1" d="M130 345 L165 345" />
+          <path id="yp-t2" d="M130 385 L165 385" />
+          <path id="yp-t3" d="M130 425 L165 425" />
+          <path id="yp-h" className="hot" d="M330 385 L470 385" />
+          <path id="yp-team" d="M212 435 L212 462" />
+          <path id="yp-p" className="hot" d="M630 385 L770 385" />
+          <path className="dash" d="M550 425 L550 469 Q550 481 562 481 L810 481" />
+          {[
+            ["yp-in", "0;0.3;1", "0;1;1", 4, ""],
+            ["yp-out", "0;0.54;0.76;1", "0;0;1;1", 4, ""],
+            ["yp-fa", "0;0.5;0.66;1", "0;0;1;1", 3, ""],
+            ["yp-fb", "0;0.52;0.67;1", "0;0;1;1", 3, ""],
+            ["yp-fc", "0;0.54;0.69;1", "0;0;1;1", 3, ""],
+            ["yp-t2", "0;0.25;0.41;1", "0;0;1;1", 3, ""],
+            ["yp-h", "0;0.4;0.62;1", "0;0;1;1", 4, "hot-dot"],
+            ["yp-p", "0;0.67;0.83;1", "0;0;1;1", 4, "hot-dot"],
+          ].map(([id, times, points, r, cls]) => (
+            <circle key={id as string} r={r as number} className={cls as string}>
+              <animateMotion dur="14s" repeatCount="indefinite" keyTimes={times as string} keyPoints={points as string} calcMode="linear">
+                <mpath href={`#${id}`} />
+              </animateMotion>
+            </circle>
+          ))}
+        </svg>
+        <div className="ynode is-pill" style={box(1.82, 13.33, 10.91, 8.52)}>
+          <h3>Public wallet</h3>
+          <p>Balance visible to all</p>
+        </div>
+        <div className="ynode is-dim" style={box(15.45, 10.74, 13.64, 13.7)}>
+          <h3>Shroud</h3>
+          <p>ETH or {S} goes in. Small fee.</p>
+        </div>
+        <div className="ynode flute justify-start!" style={box(35.45, 4.44, 29.09, 49.26)}>
+          <h3>{BRAND.name} pool</h3>
+          <p>Shared by everyone. Balances unreadable.</p>
+          <div className="note-field" aria-hidden="true">
+            {["ETH note", `${S} note`, "ETH note", `${S} note`, "ETH note", `${S} note`].map((n, i) => (
+              <span key={i} className="note-chip">
+                {n}
+              </span>
             ))}
-          </ul>
-          <Link href="/docs/roadmap" className="link mt-6 inline-flex items-center gap-1.5 text-[15px] font-semibold">
-            Read the full roadmap <ArrowUpRight size={14} />
-          </Link>
+          </div>
+          <div className="mt-3 border-t border-line pt-2.5 md:mt-auto">
+            <strong>Private transfer</strong>
+            <span className="sub block">Notes are spent and new ones written, and nothing ties old to new.</span>
+          </div>
+        </div>
+        <div className="ynode" style={box(70.91, 10.74, 13.64, 13.7)}>
+          <h3>Unshroud</h3>
+          <p>Leave to an address you choose. Flat fee.</p>
+        </div>
+        <div className="ynode is-pill" style={box(87.27, 13.33, 10.91, 8.52)}>
+          <h3>Fresh address</h3>
+          <p>Where the exit lands</p>
+        </div>
+        <div className="ysources" style={box(1.82, 61.11, 10, 20.37)} aria-label="Where trade fees come from">
+          <span>Pons launch</span>
+          <span>Uniswap v4</span>
+          <span>Routers</span>
+        </div>
+        <div className="ynode" style={box(15, 62.04, 15, 18.52)}>
+          <h3>Fee harvester</h3>
+          <p>Collects each trade&apos;s creator fee; the larger part goes to holders</p>
+          <span className="tag badge">planned</span>
+        </div>
+        <div className="ynode is-team" style={box(15, 85.56, 8.64, 7.41)}>
+          <h3>Team share</h3>
+        </div>
+        <div className="ynode is-vault" style={box(42.73, 63.89, 14.55, 14.81)}>
+          <h3>Fee vault</h3>
+          <p>Every fee lands here as {S} backing.</p>
+        </div>
+        <div className="ynode" style={box(70, 61.11, 28.18, 20.37)}>
+          <h3>Shrouded {S}</h3>
+          <p>Each share is backed by more over time.</p>
+          <div className="holder-notes" aria-hidden="true">
+            <span>Note</span>
+            <span className="mine">Yours</span>
+            <span>Note</span>
+          </div>
+        </div>
+        <div className="ynode is-dim" style={box(73.64, 84.81, 24.55, 8.52)}>
+          <h3>Public {S}</h3>
+          <p>Earns nothing.</p>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+function Uses() {
+  const items: [string, string, string][] = [
+    ["next", "Private settlement", `Desks and treasuries settle with each other inside the pool on ${CHAIN.name}, then exit only what has to be shown.`],
+    ["next", "Gasless exits", "A relayer sends the shroud or unshroud for you and covers gas, taking its fee from the note. The receiving wallet never needs ETH."],
+    ["later", "Private swaps", `Swap shrouded value for other ${CHAIN.name} assets with no visible link between what went in and what came out.`],
+    ["later", "Launch privacy coins", "New coins launch straight into the shared pool, so every launch grows the crowd that protects everyone already in it."],
+  ];
+  const who: [string, string][] = [
+    ["Traders", `Hold ${S} in a note instead of a watched wallet, so a position cannot be copied or front-run, and collect fee yield meanwhile.`],
+    ["Privacy-minded holders", "Keep savings on-chain without publishing them. Paying a friend no longer hands them your net worth and history."],
+    ["Institutions", `Settle on ${CHAIN.name} without broadcasting treasury size, counterparties or timing, and leave the pool to a new address when needed.`],
+    ["Communities", "Bring a privacy coin into the same pool instead of a new one. A bigger crowd makes each note harder to single out."],
+  ];
+  return (
+    <section className="wrap py-24 md:py-32" aria-labelledby="uses-title">
+      <header className="border-t border-line pt-6">
+        <h2 id="uses-title" className="h2-wide max-w-2xl">
+          What shrouded {S} is for
+        </h2>
+        <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-fg-2">The pool comes first. These pieces are planned on top of it, in order. None of them is live yet.</p>
+      </header>
+      <div className="mt-12 grid grid-cols-1 gap-4 md:mt-16 md:grid-cols-2 md:gap-5">
+        {items.map(([when, t, d]) => (
+          <div key={t} tabIndex={0} className="group tick-frame relative min-w-0 overflow-hidden rounded-[2px] border border-line bg-card p-6 md:p-7">
+            <div className="flute absolute inset-0 transition-opacity duration-700 ease-out group-hover:opacity-0 group-focus-visible:opacity-0" aria-hidden="true" />
+            <div className="relative">
+              <span className="tag">{when}</span>
+              <h3 className="mt-5 font-mono text-[15px] font-medium tracking-[-0.02em] text-fg md:text-[16px]">{t}</h3>
+              <p className="mt-2 max-w-[46ch] text-[14px] leading-relaxed text-fg-2">{d}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <h3 className="eyebrow mt-16">Who shrouds</h3>
+      <dl className="mt-6 grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
+        {who.map(([t, d]) => (
+          <div key={t} className="min-w-0">
+            <dt className="font-mono text-[15px] font-medium tracking-[-0.02em] text-fg">{t}</dt>
+            <dd className="mt-2 text-[14px] leading-relaxed text-fg-2">{d}</dd>
+          </div>
+        ))}
+      </dl>
     </section>
   );
 }
@@ -462,49 +322,46 @@ function BuiltOnPool() {
 
 function GetToken() {
   const steps: [string, string, string | null][] = [
-    [
-      "Buy it like any token",
-      `${BRAND.symbol} is planned as a plain ERC-20 on ${CHAIN.name}. It launches on the Pons bonding curve, moves to a Uniswap v4 pool when it graduates, and aggregators can route to it from there.`,
-      null,
-    ],
-    [
-      "Shroud what you bought",
-      "A purchase lands publicly in your wallet, like any trade. Shrouding it in the app turns it into a note that collects fee yield.",
-      null,
-    ],
-    ["Buy straight into a note", `Pay ETH inside the app and receive ${BRAND.symbol} directly as a private note, so the purchase never sits in a public wallet.`, "Later"],
+    ["Buy it like any token.", `A plain ERC-20 on ${CHAIN.name}: the Pons bonding curve first, then a Uniswap v4 pool after it graduates, with routers on top.`, null],
+    ["Shroud what you bought.", "A purchase lands publicly in your wallet. Shrouding it in the app turns it into a note that collects fee yield.", null],
+    ["Buy straight into a note.", `Pay ETH inside the app and receive ${S} directly as a private note, never sitting in a public wallet.`, "later"],
   ];
   return (
-    <section className="border-b border-line py-20 md:py-28" aria-labelledby="get-title">
-      <div className="wrap grid grid-cols-1 gap-10 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <p id="get-oarkel" className="label pt-3 text-surge">
-          ERC-20 on {CHAIN.name}
+    <section id="get-oarkel" className="relative overflow-hidden py-16 md:py-24" aria-labelledby="get-title">
+      <div className="dot-grid fade-y pointer-events-none absolute inset-0 opacity-50" aria-hidden="true" />
+      <div className="wrap-narrow relative flex flex-col items-center text-center">
+        <p className="eyebrow">ERC-20 · {CHAIN.name}</p>
+        <div className="mark-halo mt-8 text-fg" aria-hidden="true">
+          <SlatMark id="get" size={60} />
+        </div>
+        <h2 id="get-title" className="mt-8 font-mono text-[28px] leading-[1.5] font-medium tracking-[-0.02em] text-fg md:text-[34px]">
+          Get {S}.
+        </h2>
+        <CopyCaInline />
+        <p className="mt-4 max-w-xl text-[14px] leading-relaxed text-fg-2">
+          The token is how the protocol pays its private holders. The address is not published yet. When it is, it appears here, on the
+          token page and on {BRAND.xHandle}, and nowhere else.
         </p>
-        <div className="min-w-0">
-          <h2 id="get-title" className="display text-[34px] leading-[1.08] md:text-[46px]">
-            How to get {BRAND.symbol}
-          </h2>
-          <p className="mt-4 max-w-2xl text-[17px] leading-relaxed text-fg-2">
-            The token is how the protocol pays its private holders. The contract address is not published yet: when it is, it appears below,
-            on the token page and on {BRAND.xHandle}, and nowhere else.
-          </p>
-          <ol className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="relative mt-12 w-full">
+          <div className="get-track hidden md:block" aria-hidden="true">
+            <i />
+          </div>
+          <ol className="grid grid-cols-1 gap-10 pt-2 md:grid-cols-3 md:gap-0 md:pt-10">
             {steps.map(([t, d, tag], i) => (
-              <li key={t} className="tile min-w-0 p-5">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="num text-[13px] text-fg-3">step {i + 1}</span>
-                  {tag ? <Planned>{tag}</Planned> : null}
-                </div>
-                <p className="mt-3 text-[17px] font-semibold">{t}</p>
-                <p className="mt-2 text-[14.5px] leading-relaxed text-fg-2">{d}</p>
+              <li key={t} className="get-step relative px-4 md:px-7">
+                <p className="font-mono text-[11px] tracking-[0.2em] text-fg-2">0{i + 1}</p>
+                <h3 className="mt-2 flex items-center justify-center gap-2 font-mono text-[15px] font-medium tracking-[-0.02em] text-fg">
+                  {t}
+                  {tag ? <span className="tag">{tag}</span> : null}
+                </h3>
+                <p className="mx-auto mt-2 max-w-[30ch] text-[14px] leading-relaxed text-fg-2 md:max-w-none">{d}</p>
               </li>
             ))}
           </ol>
-          <CopyCaBlock className="mt-6" />
-          <Link href="/token" className="link mt-5 inline-flex items-center gap-1.5 text-[15px] font-semibold">
-            Token details and the buy card <ArrowUpRight size={14} />
-          </Link>
         </div>
+        <Link href="/token" className="btn-ink mt-12 inline-flex h-10 items-center rounded-full px-6 font-mono text-[14px]">
+          Token page
+        </Link>
       </div>
     </section>
   );
@@ -512,49 +369,53 @@ function GetToken() {
 
 /* ------------------------------------------------------------------ */
 
+const GUARANTEES: Guarantee[] = [
+  {
+    title: "No key can freeze a note.",
+    text: "The pool is designed with no admin role over user funds. At most, new deposits could be capped or halted; private payments and exits keep working no matter what.",
+    tag: "planned",
+  },
+  {
+    title: "Your browser proves it.",
+    text: "Your browser builds the zero-knowledge proof. Your notes and keys never leave it; only the proof and a nullifier go on-chain.",
+    tag: "planned",
+  },
+  {
+    title: "A relayer can pay the gas.",
+    text: "Shroud and unshroud can be sent by a relayer that covers gas and takes its fee from the note, so a fresh address never needs funding first.",
+    tag: "planned",
+  },
+  {
+    title: "One signature, all keys.",
+    text: "Note keys are derived from a signature by your wallet. Sign again on any device and they come back: there is no seed file to back up.",
+    tag: "planned",
+  },
+  {
+    title: "Immutable, by design.",
+    text: "No proxy and no upgrade path, so a bug cannot be patched. That is why the plan is a public review, staged deposit caps and a bounty before real value goes in.",
+    tag: "planned",
+  },
+  {
+    title: "Private holders get paid.",
+    text: `Shrouded ${S} collects a share of every protocol fee. The same tokens held in public collect nothing, and that gap is the reason to shroud.`,
+  },
+];
+
 function Design() {
-  const props: [string, string][] = [
-    ["No admin keys", "No address can move, freeze or redirect a note. There is no owner role over user funds."],
-    ["Immutable contracts", "No proxy and no upgrade path. The code that holds deposits on day one is the code that holds them forever."],
-    ["Exits cannot be paused", "At most, new deposits could be capped or halted. Private payments and exits keep working no matter what."],
-    ["Proofs made on your device", "Your browser builds the zero-knowledge proof. Your notes and keys stay inside your browser."],
-    ["Keys from one signature", "Note keys are derived from a signature by your wallet; sign again on any device and they come back."],
-  ];
   return (
-    <section className="night bg-night py-20 text-mist md:py-28" aria-labelledby="design-title">
-      <div className="wrap">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-          <p className="label pt-3 text-ember">Contract design</p>
-          <div className="min-w-0">
-            <h2 id="design-title" className="display text-[34px] leading-[1.08] md:text-[46px]">
-              Built so that nobody, including us, can touch a note
-            </h2>
-            <p className="mt-4 max-w-2xl text-[17px] leading-relaxed text-mist-2">
-              These are the rules the {BRAND.name} contracts are being written to. They are design goals for contracts that are not deployed
-              yet, and each one will be checkable on the explorer the day they are.
-            </p>
-          </div>
-        </div>
-        <ul className="mt-14 grid grid-cols-1 gap-px overflow-hidden rounded-[14px] border border-night-3 bg-night-3 md:grid-cols-2 lg:grid-cols-3">
-          {props.map(([t, d]) => (
-            <li key={t} className="min-w-0 bg-night p-6">
-              <Planned tone="night" />
-              <p className="mt-4 text-[18px] font-semibold text-mist">{t}</p>
-              <p className="mt-2 text-[15px] leading-relaxed text-mist-2">{d}</p>
-            </li>
-          ))}
-          <li className="min-w-0 bg-night-2 p-6">
-            <p className="label text-ember">The trade-off</p>
-            <p className="mt-4 text-[18px] font-semibold text-mist">A bug cannot be patched</p>
-            <p className="mt-2 text-[15px] leading-relaxed text-mist-2">
-              Without an admin there is nobody to ship a fix. That is why the plan is a public review, staged deposit caps and a bounty
-              before real value goes in.
-            </p>
-          </li>
-        </ul>
-        <p className="display mt-16 max-w-4xl text-[30px] leading-[1.15] md:text-[40px]">
-          The short version: private holders earn, public holders get nothing, and no one holds a key that can change that.
+    <section className="relative py-16 lg:py-0" aria-labelledby="design-title">
+      <div className="wrap-narrow pt-8 lg:pt-28">
+        <p className="eyebrow">Contract design</p>
+        <h2 id="design-title" className="h2-mono mt-3">
+          Built so that nobody, including us, can touch a note.
+        </h2>
+        <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-fg-2">
+          These are the rules the {BRAND.name} contracts are being written to. They describe contracts that are not deployed yet, and each
+          one will be checkable on the explorer the day they are.
         </p>
+      </div>
+      <div className="mt-12 lg:mt-0">
+        <Guarantees items={GUARANTEES} />
       </div>
     </section>
   );
@@ -564,29 +425,26 @@ function Design() {
 
 function Faq() {
   return (
-    <section className="border-b border-line py-20 md:py-28" aria-labelledby="faq-title">
-      <div className="wrap grid grid-cols-1 gap-10 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <p id="faq" className="label pt-3 text-surge">
-          FAQ
-        </p>
-        <div className="min-w-0">
-          <h2 id="faq-title" className="display text-[34px] leading-[1.08] md:text-[46px]">
-            Questions people ask about {BRAND.name}
-          </h2>
-          <div className="mt-10 border-t border-fg">
-            {HOME_FAQ.map(([q, a]) => (
-              <details key={q} className="group border-b border-line py-5">
-                <summary className="flex cursor-pointer list-none items-start justify-between gap-4 text-[18px] font-semibold [&::-webkit-details-marker]:hidden">
-                  <h3 className="min-w-0">{q}</h3>
-                  <span aria-hidden="true" className="num mt-0.5 shrink-0 text-surge transition-transform group-open:rotate-45">
-                    +
-                  </span>
-                </summary>
-                <p className="mt-3 max-w-3xl text-[16px] leading-relaxed text-fg-2">{a}</p>
-              </details>
-            ))}
-          </div>
-        </div>
+    <section id="faq" className="wrap py-24 md:py-32" aria-labelledby="faq-title">
+      <header className="mb-12 border-t border-line pt-6 md:mb-16">
+        <p className="eyebrow">03 / FAQ</p>
+        <h2 id="faq-title" className="h2-wide mt-4 max-w-2xl">
+          {BRAND.name}, in plain words.
+        </h2>
+      </header>
+      <div className="border-t border-line">
+        {HOME_FAQ.map(([q, a]) => (
+          <details key={q} className="group border-b border-line">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-5 font-mono text-fg [&::-webkit-details-marker]:hidden">
+              <h3 className="min-w-0 text-[15px] font-normal md:text-[16px]">{q}</h3>
+              <span aria-hidden="true" className="relative size-3 shrink-0">
+                <span className="absolute top-1/2 left-0 h-px w-3 bg-fg-2" />
+                <span className="absolute top-0 left-1/2 h-3 w-px bg-fg-2 transition-transform group-open:scale-y-0" />
+              </span>
+            </summary>
+            <p className="max-w-3xl pb-6 text-[16px] leading-relaxed text-fg-2">{a}</p>
+          </details>
+        ))}
       </div>
     </section>
   );
@@ -594,24 +452,22 @@ function Faq() {
 
 function FinalCall() {
   return (
-    <section className="py-20 md:py-28">
-      <div className="wrap">
-        <div className="sheet ruled grid grid-cols-1 gap-8 p-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:p-10">
-          <div className="min-w-0">
-            <h2 className="display text-[36px] leading-[1.05] md:text-[52px]">Walk through it before it is live</h2>
-            <p className="mt-4 max-w-2xl text-[17px] leading-relaxed text-fg-2">
-              Connect a wallet, open a practice account and shroud, hold, send and unshroud with practice balances. Each step is a free
-              signature in your own wallet. No transaction is sent and no real funds move.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Link href="/app" className="btn-surge inline-flex h-12 items-center gap-2 rounded-full px-6 text-[15px] font-semibold">
-              Open the app <ArrowRight size={16} />
-            </Link>
-            <Link href="/docs/get-started" className="btn-ghost inline-flex h-12 items-center rounded-full px-6 text-[15px] font-semibold">
-              Get started guide
-            </Link>
-          </div>
+    <section className="tide flex flex-col" aria-labelledby="final-title">
+      <div className="tide-bg" aria-hidden="true" />
+      <div className="flex flex-1 flex-col items-center px-4 pt-[18vh] pb-24 text-center md:pt-[22vh]">
+        <h2 id="final-title" className="max-w-4xl font-mono text-[44px] leading-[0.95] font-medium tracking-[-0.025em] text-fg md:text-[72px]">
+          Drop off the record.
+        </h2>
+        <p className="mt-6 max-w-xl text-[18px] leading-relaxed text-balance text-fg-2">
+          Connect a wallet and walk the whole flow with practice balances. Every step is a free signature; nothing is sent on chain.
+        </p>
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+          <Link href="/app" className="btn-ink inline-flex h-[52px] items-center rounded-full px-8 font-mono text-[14px] font-semibold">
+            Launch app
+          </Link>
+          <Link href="/docs/get-started" className="btn-ghost inline-flex h-[52px] items-center rounded-full px-8 font-mono text-[14px] text-fg/90">
+            Get started guide
+          </Link>
         </div>
       </div>
     </section>

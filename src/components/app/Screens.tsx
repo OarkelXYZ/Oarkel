@@ -49,7 +49,7 @@ function AssetPick({ value, onChange }: { value: Asset; onChange: (a: Asset) => 
           role="radio"
           aria-checked={value === a}
           onClick={() => onChange(a)}
-          className={`rounded-full px-4 py-1.5 text-[14px] font-semibold transition-colors ${value === a ? "bg-fg text-paper" : "text-fg-2 hover:text-fg"}`}
+          className={`rounded-full px-4 py-1.5 font-mono text-[12.5px] transition-colors ${value === a ? "bg-fg text-paper" : "text-fg-2 hover:text-fg"}`}
         >
           {NAME[a]}
         </button>
@@ -62,7 +62,7 @@ function Panel({ title, children, aside }: { title: string; children: React.Reac
   return (
     <section className="tile min-w-0 p-5 md:p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-[17px] font-semibold">{title}</h2>
+        <h2 className="font-mono text-[16px] font-medium tracking-[-0.02em]">{title}</h2>
         {aside}
       </div>
       <div className="mt-4">{children}</div>
@@ -103,10 +103,10 @@ export function Overview() {
         >
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {(["eth", "oarkel"] as Asset[]).map((a) => (
-              <div key={a} className="min-w-0 rounded-[10px] bg-fg px-4 py-4 text-paper">
-                <p className="label text-paper/60">Shrouded {NAME[a]}</p>
+              <div key={a} className="flute min-w-0 rounded-[4px] border border-line-2 bg-card px-4 py-4 text-fg">
+                <p className="label text-fg-2">Shrouded {NAME[a]}</p>
                 <p className="num mt-2 truncate text-[26px]" data-testid={`private-${a}`}>
-                  {reveal ? fmt(v.private[a]) : <Redact w={8} className="bg-paper" />}
+                  {reveal ? fmt(v.private[a]) : <Redact w={8} />}
                 </p>
               </div>
             ))}
@@ -155,7 +155,7 @@ export function Overview() {
               type="button"
               disabled={Boolean(busy)}
               onClick={() => act("topup")}
-              className="btn-ghost mt-4 inline-flex h-9 items-center rounded-full px-4 text-[13.5px] font-semibold"
+              className="btn-ghost mt-4 inline-flex h-9 items-center rounded-full px-4 font-mono text-[12px]"
             >
               Top up practice balance
             </button>
@@ -233,7 +233,7 @@ function formFrame(title: string, lede: string, form: React.ReactNode, side: Rea
 function Explainer({ title, points }: { title: string; points: string[] }) {
   return (
     <section className="sheet ruled p-5 md:p-6">
-      <h2 className="text-[16px] font-semibold">{title}</h2>
+      <h2 className="font-mono text-[15px] font-medium tracking-[-0.02em]">{title}</h2>
       <ul className="mt-3 space-y-2 text-[14.5px] leading-relaxed text-fg-2">
         {points.map((p) => (
           <li key={p} className="flex gap-2.5">
@@ -277,7 +277,7 @@ export function ShroudForm() {
         onClick={async () => {
           if (amount && (await act("shroud", { asset, amount }))) setText("");
         }}
-        className="btn-surge mt-5 h-12 w-full rounded-full text-[15px] font-semibold"
+        className="btn-ink mt-5 h-12 w-full rounded-full font-mono text-[14px]"
         data-testid="submit"
       >
         {busy ?? `Shroud ${NAME[asset]}`}
@@ -334,7 +334,7 @@ export function UnshroudForm() {
         <input value={to} onChange={(e) => setTo(e.target.value)} placeholder={address} className="field num mt-2 text-[14px]" data-testid="to" />
       </label>
       <label className="mt-4 flex cursor-pointer items-start gap-3 text-[14.5px]">
-        <input type="checkbox" checked={relayer} onChange={(e) => setRelayer(e.target.checked)} className="mt-1 size-4 accent-[#b83c1c]" />
+        <input type="checkbox" checked={relayer} onChange={(e) => setRelayer(e.target.checked)} className="mt-1 size-4 accent-[var(--color-fg)]" />
         <span>
           <span className="font-semibold">Use a relayer</span>
           <span className="block text-[13px] text-fg-3">The relayer pays the gas and takes its fee from the note, so the recipient needs no ETH.</span>
@@ -355,7 +355,7 @@ export function UnshroudForm() {
         onClick={async () => {
           if (amount && (await act("unshroud", { asset, amount, to: dest, relayer }))) setText("");
         }}
-        className="btn-surge mt-5 h-12 w-full rounded-full text-[15px] font-semibold"
+        className="btn-ink mt-5 h-12 w-full rounded-full font-mono text-[14px]"
         data-testid="submit"
       >
         {busy ?? `Unshroud ${NAME[asset]}`}
@@ -420,7 +420,7 @@ export function SendForm() {
         onClick={async () => {
           if (amount && (await act("send", { asset, amount, to: dest }))) setText("");
         }}
-        className="btn-surge mt-5 h-12 w-full rounded-full text-[15px] font-semibold"
+        className="btn-ink mt-5 h-12 w-full rounded-full font-mono text-[14px]"
         data-testid="submit"
       >
         {busy ?? "Send privately"}
@@ -487,17 +487,17 @@ export function SettingsView() {
                 // clipboard refused
               }
             }}
-            className="btn-ghost inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-[13.5px] font-semibold"
+            className="btn-ghost inline-flex h-9 items-center gap-1.5 rounded-full px-4 font-mono text-[12px]"
           >
             {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? "Copied" : "Copy address"}
           </button>
-          <a href={explorerAddress(address)} target="_blank" rel="noreferrer" className="btn-ghost inline-flex h-9 items-center rounded-full px-4 text-[13.5px] font-semibold">
+          <a href={explorerAddress(address)} target="_blank" rel="noreferrer" className="btn-ghost inline-flex h-9 items-center rounded-full px-4 font-mono text-[12px]">
             View on explorer
           </a>
-          <button type="button" onClick={refresh} className="btn-ghost inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-[13.5px] font-semibold">
+          <button type="button" onClick={refresh} className="btn-ghost inline-flex h-9 items-center gap-1.5 rounded-full px-4 font-mono text-[12px]">
             <ArrowsClockwise size={14} /> Refresh
           </button>
-          <button type="button" onClick={disconnect} className="inline-flex h-9 items-center rounded-full px-4 text-[13.5px] font-semibold text-down hover:bg-down/10">
+          <button type="button" onClick={disconnect} className="inline-flex h-9 items-center rounded-full px-4 font-mono text-[12px] text-down hover:bg-down/10">
             Disconnect
           </button>
         </div>

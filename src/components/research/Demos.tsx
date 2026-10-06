@@ -18,9 +18,9 @@ function rng(seed: number) {
 }
 
 const Frame = ({ children, caption }: { children: React.ReactNode; caption: string }) => (
-  <figure className="sheet mt-6 overflow-hidden">
-    <div className="p-4 md:p-6">{children}</div>
-    <figcaption className="border-t border-line bg-card-2/60 px-4 py-2.5 text-[12.5px] text-fg-3 md:px-6">{caption}</figcaption>
+  <figure className="guar-stage mt-6 overflow-hidden border border-line-2 bg-paper">
+    <div className="p-4 md:px-[72px] md:py-12">{children}</div>
+    <figcaption className="border-t border-line px-4 py-3 font-mono text-[11.5px] text-fg-3 md:px-6">{caption}</figcaption>
   </figure>
 );
 
@@ -31,10 +31,10 @@ const Toggle = ({ on, onChange, label }: { on: boolean; onChange: (v: boolean) =
     aria-checked={on}
     onClick={() => onChange(!on)}
     className={`inline-flex h-9 items-center gap-2 rounded-full px-3.5 text-[13.5px] font-medium transition-colors ${
-      on ? "bg-fg text-paper" : "btn-ghost"
+      on ? "bg-fg text-paper" : "btn-ghost text-fg-2"
     }`}
   >
-    <span className={`size-2 rounded-full ${on ? "bg-ember" : "bg-line-2"}`} />
+    <span className={`size-2 rounded-full ${on ? "bg-surge" : "bg-line-2"}`} />
     {label}
   </button>
 );
@@ -69,7 +69,7 @@ export function RootTimingDemo() {
           value={root}
           disabled={newest}
           onChange={(e) => setRoot(Number(e.target.value))}
-          className="mt-2 w-full accent-[#b83c1c]"
+          className="mt-2 w-full accent-[var(--color-fg)]"
         />
       </label>
       <div className="mt-5 grid grid-cols-12 gap-1 sm:grid-cols-[repeat(18,minmax(0,1fr))]" aria-hidden="true">

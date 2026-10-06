@@ -96,13 +96,13 @@ function WalletDialog({ onClose }: { onClose: () => void }) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="wallet-dialog-title"
-      className="fixed inset-0 z-[70] flex items-end justify-center md:items-center md:p-4"
+      className="fixed inset-0 z-[120] flex items-end justify-center md:items-center md:p-4"
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={close} />
       <div className="surface enter relative flex max-h-[92dvh] w-full max-w-[420px] flex-col overflow-hidden rounded-b-none md:rounded-b-[24px]">
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
           <div className="flex items-center gap-2.5">
-            <Mark size={28} className="text-surge" />
+            <Mark size={28} className="text-fg" />
             <h2 id="wallet-dialog-title" className="text-[17px] font-semibold">
               Connect a wallet
             </h2>
@@ -220,7 +220,7 @@ export function NavWallet({ compact = false }: { compact?: boolean }) {
   const { open } = useWalletModal();
   if (address) return <AccountMenu compact={compact} />;
   return (
-    <button type="button" onClick={open} className="btn-ghost h-9 shrink-0 rounded-full px-4 text-[14px] font-semibold whitespace-nowrap">
+    <button type="button" onClick={open} className="site-launch shrink-0">
       {compact ? "Connect" : "Connect wallet"}
     </button>
   );
@@ -285,7 +285,7 @@ function AccountMenu({ compact }: { compact: boolean }) {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className="btn-ghost num flex h-9 shrink-0 items-center gap-2 rounded-full px-3 text-[13px]"
+        className="btn-ghost num flex h-[33px] shrink-0 items-center gap-2 rounded-full px-3 text-[12px]"
       >
         <span className={`size-1.5 rounded-full ${onRobinhoodChain ? "bg-up" : "bg-down"}`} />
         <span>{shortAddress(address, compact ? 4 : 6, 4)}</span>
@@ -299,7 +299,7 @@ function AccountMenu({ compact }: { compact: boolean }) {
               ref={menu}
               role="menu"
               style={{ position: "fixed", top: place.top, left: place.left }}
-              className="surface z-[80] w-[272px] overflow-hidden p-1.5"
+              className="surface z-[130] w-[272px] overflow-hidden p-1.5"
             >
               <div className="tile px-3.5 py-3">
                 <p className="text-[12px] text-fg-3">{walletName ?? "Wallet"}</p>

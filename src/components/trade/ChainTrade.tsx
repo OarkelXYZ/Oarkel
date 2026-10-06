@@ -190,9 +190,9 @@ export function ChainTrade({
               role="tab"
               aria-selected={reverse === rev}
               onClick={() => setReverse(rev)}
-              className={`relative h-9 rounded-full text-[14px] font-semibold transition-colors ${reverse === rev ? "text-ink" : "text-fg-2 hover:text-fg"}`}
+              className={`relative h-9 rounded-full font-mono text-[13px] transition-colors ${reverse === rev ? "text-paper" : "text-fg-2 hover:text-fg"}`}
             >
-              {reverse === rev ? <span className="absolute inset-0 rounded-full bg-surge" /> : null}
+              {reverse === rev ? <span className="absolute inset-0 rounded-full bg-fg" /> : null}
               <span className="relative">{rev ? "Sell" : "Buy"}</span>
             </button>
           ))}
@@ -303,7 +303,7 @@ export function ChainTrade({
           <button
             type="button"
             onClick={open}
-            className="btn-surge h-12 w-full rounded-full text-[15px] font-bold"
+            className="btn-ink h-12 w-full rounded-full text-[15px] font-bold"
             data-testid="swap-connect"
           >
             Connect wallet
@@ -313,7 +313,7 @@ export function ChainTrade({
             type="button"
             onClick={switchNetwork}
             disabled={switching}
-            className="btn-surge h-12 w-full rounded-full text-[15px] font-bold"
+            className="btn-ink h-12 w-full rounded-full text-[15px] font-bold"
           >
             {switching ? "Confirm in wallet…" : `Switch to ${CHAIN.name}`}
           </button>
@@ -326,7 +326,7 @@ export function ChainTrade({
             href={PONS.page(token)}
             target="_blank"
             rel="noreferrer"
-            className="btn-surge inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-full text-[15px] font-bold"
+            className="btn-ink inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-full text-[15px] font-bold"
           >
             Trade it on Pons <ArrowUpRight size={14} weight="bold" />
           </a>
@@ -335,7 +335,7 @@ export function ChainTrade({
             type="button"
             onClick={trade}
             disabled={!tradable || !amountIn || short || out === null || out === 0n || stage !== null}
-            className="btn-surge h-12 w-full rounded-full text-[15px] font-bold"
+            className="btn-ink h-12 w-full rounded-full text-[15px] font-bold"
             data-testid="swap-submit"
           >
             {stage ??

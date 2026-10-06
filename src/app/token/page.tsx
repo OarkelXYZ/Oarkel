@@ -32,50 +32,50 @@ export default function TokenPage() {
     ["Contract", token ?? "Coming soon"],
   ];
   return (
-    <main id="main" className="wrap py-12 md:py-16">
+    <main id="main" className="wrap pt-[120px] pb-20 md:pt-[136px]">
       <JsonLd data={breadcrumbs([{ name: `${BRAND.symbol} token`, path: "/token" }])} />
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_420px]">
         <div className="min-w-0">
-          <p className="label text-surge">ERC-20 on {CHAIN.name}</p>
-          <h1 className="display mt-3 text-[44px] leading-[1.03] md:text-[60px]">
+          <p className="eyebrow">ERC-20 · {CHAIN.name}</p>
+          <h1 className="mt-4 font-mono text-[30px] leading-[1.15] font-medium tracking-[-0.025em] md:text-[36px]">
             {BRAND.name} ({BRAND.symbol}) token
           </h1>
-          <p className="mt-5 max-w-2xl text-[18px] leading-relaxed text-fg-2">
+          <p className="mt-5 max-w-2xl text-[18px] leading-relaxed text-white/60">
             {BRAND.symbol} is the token of {BRAND.name}, the privacy protocol for {CHAIN.name}. Held in a public wallet it is an ordinary
             ERC-20. Shrouded into the private pool it becomes a note that, in the planned design, earns a share of every protocol fee.
           </p>
           {!token ? (
-            <p className="mt-6 max-w-2xl rounded-[10px] border-l-4 border-surge bg-surge-soft/60 px-4 py-3.5 text-[15px] leading-relaxed">
+            <p className="mt-6 max-w-2xl rounded-[8px] border border-l-[3px] border-white/10 border-l-surge bg-white/[0.025] px-5 py-4 text-[15px] leading-relaxed">
               Contract address coming soon. It will be published here, in the site footer and on {BRAND.xHandle} at the same time. Until
               then, any token using the name or ticker is not ours.
             </p>
           ) : null}
           <CopyCaBlock className="mt-6" />
 
-          <h2 className="display mt-14 text-[30px] leading-tight">Token details</h2>
-          <dl className="mt-4 border-t border-fg">
+          <h2 className="mt-14 border-t border-line pt-6 font-mono text-[20px] leading-tight font-medium tracking-[-0.02em] md:text-[22px]">Token details</h2>
+          <dl className="mt-4 border-t border-line">
             {facts.map(([k, v]) => (
               <div key={k} className="grid grid-cols-1 gap-1 border-b border-line py-3 sm:grid-cols-[180px_minmax(0,1fr)]">
                 <dt className="text-[14px] text-fg-3">{k}</dt>
-                <dd className="num text-[14.5px] break-all text-fg">{v}</dd>
+                <dd className="num text-[13.5px] break-all text-fg">{v}</dd>
               </div>
             ))}
           </dl>
           <div className="tile mt-5 p-4">
-            <p className="label mb-3 text-fg-3">Read from the contract</p>
+            <p className="eyebrow mb-3">Read from the contract</p>
             <OnchainFacts />
           </div>
           <ul className="mt-5 flex flex-wrap gap-2">
             {links.map((l) =>
               l.href ? (
                 <li key={l.label}>
-                  <a href={l.href} target="_blank" rel="noreferrer" className="btn-ghost inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-[13.5px] font-semibold">
+                  <a href={l.href} target="_blank" rel="noreferrer" className="btn-ghost inline-flex h-9 items-center gap-1.5 rounded-full px-4 font-mono text-[12px]">
                     {l.label} <ArrowUpRight size={13} />
                   </a>
                 </li>
               ) : (
                 <li key={l.label}>
-                  <span className="btn-ghost inline-flex h-9 items-center rounded-full px-4 text-[13.5px] font-semibold opacity-50" aria-disabled="true">
+                  <span className="btn-ghost inline-flex h-9 items-center rounded-full px-4 font-mono text-[12px] opacity-50" aria-disabled="true">
                     {l.label} · at launch
                   </span>
                 </li>
@@ -83,7 +83,7 @@ export default function TokenPage() {
             )}
           </ul>
 
-          <h2 className="display mt-14 text-[30px] leading-tight">How to buy {BRAND.symbol}</h2>
+          <h2 className="mt-14 border-t border-line pt-6 font-mono text-[20px] leading-tight font-medium tracking-[-0.02em] md:text-[22px]">How to buy {BRAND.symbol}</h2>
           <div className="prose-ok mt-2">
           <ol>
             <li>Connect an EVM wallet. The site adds {CHAIN.name} to it for you.</li>
@@ -94,7 +94,7 @@ export default function TokenPage() {
             </li>
           </ol>
           </div>
-          <h2 className="display mt-14 text-[30px] leading-tight">Why shroud {BRAND.symbol}</h2>
+          <h2 className="mt-14 border-t border-line pt-6 font-mono text-[20px] leading-tight font-medium tracking-[-0.02em] md:text-[22px]">Why shroud {BRAND.symbol}</h2>
           <div className="prose-ok mt-2">
           <p>
             Every fee the protocol takes is designed to reach one vault that backs shrouded {BRAND.symbol}. Public holders get none of it.
