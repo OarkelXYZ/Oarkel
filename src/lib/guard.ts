@@ -12,13 +12,42 @@ import { spend } from "@/lib/ratelimit";
 
 export const MAX_BODY = 4096;
 
+/**
+ * Reads the body as a stream and stops as soon as it passes `max` bytes, so a
+ * chunked upload without a content-length cannot make the server buffer it
+ * whole. Returns null when the body is too large.
+ */
+export async function readCapped(request: Request, max: number): Promise<string | null> {
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) {
+      await reader.cancel().catch(() => {});
+      return null;
+    }
+    chunks.push(value);
+  }
+  const all = new Uint8Array(size);
+  let at = 0;
+  for (const c of chunks) {
+    all.set(c, at);
+    at += c.byteLength;
+  }
+  return new TextDecoder().decode(all);
+}
+
 /** Parses a small JSON body; null when it is missing, malformed or too large. */
 export async function readJson<T>(request: Request, max = MAX_BODY): Promise<T | null> {
   const declared = Number(request.headers.get("content-length") ?? 0);
   if (declared > max) return null;
   try {
-    const text = await request.text();
-    if (text.length > max) return null;
+    const text = await readCapped(request, max);
+    if (text === null) return null;
     return text ? (JSON.parse(text) as T) : null;
   } catch {
     return null;
@@ -34,13 +63,13 @@ export async function readBody<T>(request: Request, max = MAX_BODY): Promise<{ d
   const tooLarge = () => ({ response: NextResponse.json({ error: "Request body too large." }, { status: 413 }) });
   const declared = Number(request.headers.get("content-length") ?? 0);
   if (declared > max) return tooLarge();
-  let text: string;
+  let text: string | null;
   try {
-    text = await request.text();
+    text = await readCapped(request, max);
   } catch {
     return { response: badBody() };
   }
-  if (new TextEncoder().encode(text).length > max) return tooLarge();
+  if (text === null) return tooLarge();
   try {
     const data = JSON.parse(text) as T;
     if (!data || typeof data !== "object") return { response: badBody() };
