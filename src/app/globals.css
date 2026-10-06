@@ -1,0 +1,387 @@
+@import "tailwindcss";
+
+/*
+ * Oarkel design system: a printed ledger. Warm paper, ink type, one vermilion
+ * "stamp" accent, and black redaction bars wherever a value is private.
+ * Night bands (ink background) mark the sections about what stays hidden.
+ */
+
+@theme {
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-display: var(--font-newsreader), ui-serif, Georgia, serif;
+
+  /* paper side */
+  --color-paper: #eeebe3;
+  --color-card: #f7f5ef;
+  --color-card-2: #e7e3d8;
+  --color-card-3: #ddd8ca;
+  --color-fg: #16181d;
+  --color-fg-2: #3f424a;
+  --color-fg-3: #62656d;
+  --color-fg-4: #8f9196;
+  --color-line: #d6d1c4;
+  --color-line-2: #bfb8a7;
+
+  /* accent: vermilion stamp ink */
+  --color-surge: #b83c1c;
+  --color-surge-2: #9c3115;
+  --color-surge-soft: #f3dcd2;
+
+  /* status */
+  --color-up: #2c7a4b;
+  --color-down: #b42318;
+
+  /* night side */
+  --color-night: #15171c;
+  --color-night-2: #1f2229;
+  --color-night-3: #2a2e37;
+  --color-mist: #ebe7dd;
+  --color-mist-2: #b9b6ad;
+  --color-mist-3: #8d8b85;
+  --color-ember: #ef8a5e;
+
+  --radius-card: 14px;
+}
+
+@layer base {
+  html {
+    background: var(--color-paper);
+    color: var(--color-fg);
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: 88px;
+  }
+  body {
+    background: var(--color-paper);
+    color: var(--color-fg);
+    min-height: 100dvh;
+  }
+  ::selection {
+    background: var(--color-fg);
+    color: var(--color-paper);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-surge);
+    outline-offset: 2px;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: default;
+  }
+}
+
+@layer components {
+  /* Containers */
+  .wrap {
+    width: 100%;
+    max-width: 1200px;
+    margin-inline: auto;
+    padding-inline: 16px;
+  }
+  @media (min-width: 768px) {
+    .wrap {
+      padding-inline: 32px;
+    }
+  }
+
+  .display {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.015em;
+  }
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .label {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Surfaces */
+  .surface {
+    background: var(--color-card);
+    border: 1px solid var(--color-line);
+    border-radius: 18px;
+    box-shadow: 0 18px 40px -24px rgb(22 24 29 / 0.35);
+  }
+  .tile {
+    background: var(--color-card);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+  }
+  .sheet {
+    background: var(--color-card);
+    border: 1px solid var(--color-line);
+    border-radius: 6px;
+  }
+  .night .tile,
+  .night .sheet {
+    background: var(--color-night-2);
+    border-color: var(--color-night-3);
+  }
+
+  /* Ruled paper behind the ledger cards */
+  .ruled {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 31px,
+      rgb(22 24 29 / 0.07) 31px,
+      rgb(22 24 29 / 0.07) 32px
+    );
+  }
+
+  /* The redaction bar: the brand's one recurring shape. */
+  .redact {
+    display: inline-block;
+    background: var(--color-fg);
+    border-radius: 2px;
+    height: 0.92em;
+    vertical-align: -0.1em;
+  }
+  .night .redact {
+    background: var(--color-mist);
+  }
+  .redact-sweep {
+    transform-origin: left center;
+    animation: sweep 5.5s cubic-bezier(0.7, 0, 0.2, 1) infinite;
+  }
+  @keyframes sweep {
+    0%,
+    12% {
+      transform: scaleX(0);
+    }
+    26%,
+    86% {
+      transform: scaleX(1);
+    }
+    100% {
+      transform: scaleX(0);
+    }
+  }
+
+  /* Buttons */
+  .btn-surge {
+    background: var(--color-surge);
+    color: #fff8f3;
+    transition: background-color 0.15s ease;
+  }
+  .btn-surge:hover:not(:disabled) {
+    background: var(--color-surge-2);
+  }
+  .btn-surge:disabled {
+    opacity: 0.5;
+  }
+  .btn-ink {
+    background: var(--color-fg);
+    color: var(--color-paper);
+    transition: background-color 0.15s ease;
+  }
+  .btn-ink:hover:not(:disabled) {
+    background: #2b2e36;
+  }
+  .btn-ink:disabled {
+    opacity: 0.45;
+  }
+  .btn-ghost {
+    background: var(--color-card);
+    color: var(--color-fg);
+    box-shadow: inset 0 0 0 1px var(--color-line-2);
+    transition:
+      background-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--color-card-2);
+    box-shadow: inset 0 0 0 1px var(--color-fg-3);
+  }
+  .btn-ghost:disabled {
+    opacity: 0.55;
+  }
+  .night .btn-ghost {
+    background: transparent;
+    color: var(--color-mist);
+    box-shadow: inset 0 0 0 1px var(--color-night-3);
+  }
+  .night .btn-ghost:hover:not(:disabled) {
+    background: var(--color-night-2);
+    box-shadow: inset 0 0 0 1px var(--color-mist-3);
+  }
+
+  .link {
+    text-decoration: underline;
+    text-decoration-color: var(--color-line-2);
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+    transition: text-decoration-color 0.15s ease;
+  }
+  .link:hover {
+    text-decoration-color: currentColor;
+  }
+
+  /* Form fields */
+  .field {
+    width: 100%;
+    min-width: 0;
+    background: var(--color-card);
+    border: 1px solid var(--color-line-2);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 15px;
+    color: var(--color-fg);
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--color-fg);
+  }
+
+  /* Article prose for docs and research */
+  .prose-ok {
+    color: var(--color-fg-2);
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  .prose-ok h2 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    color: var(--color-fg);
+    font-size: 26px;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    margin-top: 2.2em;
+    margin-bottom: 0.5em;
+    scroll-margin-top: 96px;
+  }
+  .prose-ok h3 {
+    color: var(--color-fg);
+    font-weight: 600;
+    font-size: 17px;
+    margin-top: 1.6em;
+    margin-bottom: 0.3em;
+  }
+  .prose-ok p {
+    margin-top: 0.9em;
+  }
+  .prose-ok ul,
+  .prose-ok ol {
+    margin-top: 0.9em;
+    padding-left: 1.2em;
+  }
+  .prose-ok ul {
+    list-style: square;
+  }
+  .prose-ok ol {
+    list-style: decimal;
+  }
+  .prose-ok li {
+    margin-top: 0.35em;
+    padding-left: 0.2em;
+  }
+  .prose-ok li::marker {
+    color: var(--color-surge);
+  }
+  .prose-ok strong {
+    color: var(--color-fg);
+    font-weight: 600;
+  }
+  .prose-ok a {
+    color: var(--color-fg);
+    text-decoration: underline;
+    text-decoration-color: var(--color-surge);
+    text-underline-offset: 3px;
+  }
+  .prose-ok code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    background: var(--color-card-2);
+    border-radius: 4px;
+    padding: 0.1em 0.35em;
+    overflow-wrap: anywhere;
+  }
+  .prose-ok pre {
+    margin-top: 1em;
+    background: var(--color-night);
+    color: var(--color-mist);
+    border-radius: 10px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-size: 13.5px;
+    line-height: 1.6;
+  }
+  .prose-ok pre code {
+    background: none;
+    padding: 0;
+    color: inherit;
+  }
+  .prose-ok table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14.5px;
+  }
+  .prose-ok th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--color-fg);
+    border-bottom: 1px solid var(--color-line-2);
+    padding: 8px 10px 8px 0;
+    vertical-align: bottom;
+  }
+  .prose-ok td {
+    border-bottom: 1px solid var(--color-line);
+    padding: 9px 10px 9px 0;
+    vertical-align: top;
+  }
+  .table-scroll {
+    margin-top: 1em;
+    max-width: 100%;
+    overflow-x: auto;
+    min-width: 0;
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .enter {
+    animation: enter 0.22s ease-out both;
+  }
+  @keyframes enter {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .pulse-dot {
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.35;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .redact-sweep,
+  .enter,
+  .pulse-dot {
+    animation: none !important;
+  }
+}
