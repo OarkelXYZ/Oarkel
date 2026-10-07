@@ -4,7 +4,7 @@
 // explorer link derive from it. Anything that is not a 0x + 40 hex address is
 // treated as "not launched yet" (copy buttons disabled, "At launch" shown).
 
-const CA = "0xxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+const CA = "0xb34ceb0a58d9f270844076f77f0add5917ab77f7";
 // Pair the chart button opens on DEXTools once the token trades. Leave empty
 // until DEXTools lists it.
 const CHART_PAIR = "";
