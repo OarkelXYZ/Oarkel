@@ -53,7 +53,7 @@ export type SpendRequest = {
   tree: MerkleTree;
   /** Optional private payment to another key (value in note units). */
   pay?: { pk: bigint; viewPub: Uint8Array; value: bigint };
-  /** Note units leaving the pool (unshroud amount, or the relayer's cut of a send). */
+  /** Note units leaving the pool (the unshroud amount; zero for a private send from this site). */
   exitValue: bigint;
   feeBps: bigint;
   recipient: string;

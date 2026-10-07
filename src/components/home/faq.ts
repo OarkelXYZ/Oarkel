@@ -35,11 +35,11 @@ export const HOME_FAQ: [string, string][] = [
   ],
   [
     "Which fees does Oarkel charge?",
-    `A creator fee on ${BRAND.symbol} trades, a 0.25% shroud fee, a 0.10% private transfer fee and a flat unshroud fee of 0.0005 ETH or 20 ${BRAND.symbol}. Those are the values the pool will be deployed with, and they are fixed forever at deploy; the contract refuses any fee above 5%. A relayer that pays your gas sets its own fee on top. The practice app uses the same rates.`,
+    `A creator fee on ${BRAND.symbol} trades, a 0.25% shroud fee, a 0.10% private transfer fee and a flat unshroud fee of 0.0005 ETH or 20 ${BRAND.symbol}. Those are the values the pool will be deployed with, and they are fixed forever at deploy; the contract refuses any fee above 5%. Gas is paid in ETH by the wallet that sends each transaction. The practice app uses the same rates.`,
   ],
   [
     "Do I need ETH to shroud or unshroud?",
-    "To shroud, yes: you send that transaction from your own wallet. To unshroud or pay privately, no. A relayer can submit the transaction and pay the gas, taking its fee out of the note itself, so the wallet that receives a withdrawal never has to be funded first.",
+    "You need a little ETH for gas in the wallet you connect. Every shroud, private payment and unshroud is sent from that wallet. The address that receives an unshroud needs nothing: it only receives.",
   ],
   [
     "What are the risks?",

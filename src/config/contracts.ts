@@ -16,11 +16,11 @@ import { BRAND, CHAIN, isAddress } from "@/config/brand";
  * and the real CA (src/config/brand.ts) are all set, /app sends real
  * transactions through the connected wallet.
  */
-const POSEIDON_T3 = "";
-const POSEIDON_T4 = "";
-const ZK_TRANSCRIPT_LIB = "";
-const RELATIONS_LIB = "";
-const VERIFIER = "";
+const POSEIDON_T3 = "0xa09ceb11d309f8c71bed947f85cbe524910ac53f";
+const POSEIDON_T4 = "0xa4549b7d8c670a1d0982e8fbeda3c6d553d22f62";
+const ZK_TRANSCRIPT_LIB = "0x25f4f66a94ab605254df054e0e0259a7a2bfb5e3";
+const RELATIONS_LIB = "0xedb415e7c45c75baa05cf869147383aec3083772";
+const VERIFIER = "0x6d375cd1d74f9391f2306a1aa91639f269fe04a2";
 const POOL = "";
 const POOL_DEPLOY_BLOCK = 0;
 const FEE_SINK = "";
@@ -65,15 +65,6 @@ export const POOL_DEFAULTS = {
   /** 20 $OARKEL, in whole tokens (multiplied by the token's decimals on deploy). */
   unshroudFeeTokens: 20n,
 } as const;
-
-/** Suggested relayer fees (the relayer sets its own; these are what the app offers by default). */
-export const RELAYER_DEFAULT_FEE = { ethWei: 200_000_000_000_000n, tokens: 8n } as const;
-
-/**
- * Optional relayers (keeper/relayer.mjs), comma-separated, tried in order: the app uses the first one
- * that answers and moves to the next when one refuses work. Empty: users submit from their own wallet.
- */
-export const RELAYER_URL = process.env.NEXT_PUBLIC_OARKEL_RELAYER_URL || "";
 
 export const poolLive = () => isAddress(CONTRACTS.pool) && isAddress(CONTRACTS.token) && CONTRACTS.poolDeployBlock > 0;
 export const verifierLive = () => isAddress(CONTRACTS.verifier);

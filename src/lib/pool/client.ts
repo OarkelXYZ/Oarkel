@@ -214,28 +214,3 @@ function ask(msg: Record<string, unknown>) {
 /** Loads the prover in the background (circuit, WASM, SRS points). */
 export const warmProver = () => ask({ kind: "warm" }).catch(() => undefined);
 export const prove = (witness: Record<string, unknown>) => ask({ kind: "prove", witness });
-
-/* ------------------------------------------------------------ relayer */
-
-export type RelayerInfo = { address: string; chainId: number; pool: string; feeEthWei: string; acceptsTokenFees?: boolean; feeTokenUnits?: string };
-
-export async function relayerInfo(url: string): Promise<RelayerInfo> {
-  const res = await fetch(`${url.replace(/\/$/, "")}/info`, { cache: "no-store" });
-  if (!res.ok) throw new Error("The relayer did not answer.");
-  const info = (await res.json()) as RelayerInfo;
-  if (info.chainId !== CHAIN.id || info.pool.toLowerCase() !== CONTRACTS.pool.toLowerCase()) throw new Error("That relayer serves a different pool.");
-  if (!/^0x[0-9a-fA-F]{40}$/.test(info.address)) throw new Error("The relayer sent a bad address.");
-  return info;
-}
-
-export async function relay(url: string, kind: "transact" | "unshroud", data: string): Promise<string> {
-  const res = await fetch(`${url.replace(/\/$/, "")}/relay`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ kind, data }),
-    cache: "no-store",
-  });
-  const body = (await res.json().catch(() => ({}))) as { hash?: string; error?: string };
-  if (!res.ok || !body.hash) throw new Error(body.error || "The relayer refused the transaction.");
-  return body.hash;
-}

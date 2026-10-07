@@ -1,6 +1,6 @@
 /*
- * Note cryptography shared by the browser, the prover worker, the relayer and
- * the contract tests. No framework imports: this file runs as-is in Node
+ * Note cryptography shared by the browser, the prover worker and the contract
+ * tests. No framework imports: this file runs as-is in Node
  * (type stripping) and in a bundled worker.
  *
  * Hashes are circomlib-compatible Poseidon over BN254 (poseidon-lite). The

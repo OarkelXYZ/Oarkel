@@ -22,7 +22,7 @@ export type Action =
   | { kind: "topup" }
   | { kind: "shroud"; asset: Asset; amount: number }
   | { kind: "send"; asset: Asset; amount: number; to: string }
-  | { kind: "unshroud"; asset: Asset; amount: number; to: string; relayer: boolean };
+  | { kind: "unshroud"; asset: Asset; amount: number; to: string };
 
 type Intent = { address: string; action: Action; message: string; expires: number };
 
@@ -54,7 +54,7 @@ export function parseAction(kind: unknown, raw: unknown): Action | string {
   const to = typeof p.to === "string" ? p.to.trim().toLowerCase() : "";
   if (!/^0x[0-9a-f]{40}$/.test(to)) return "Enter a full 0x address (42 characters).";
   if (kind === "send") return { kind, asset: p.asset, amount, to };
-  return { kind, asset: p.asset, amount, to, relayer: p.relayer === true };
+  return { kind, asset: p.asset, amount, to };
 }
 
 function describe(action: Action, self: string) {
@@ -68,7 +68,7 @@ function describe(action: Action, self: string) {
     case "send":
       return `Send ${tok(action.amount)} ${label(action.asset)} privately to ${action.to}`;
     case "unshroud":
-      return `Unshroud ${tok(action.amount)} ${label(action.asset)} to ${action.to === self ? "this wallet" : action.to}${action.relayer ? " through a relayer" : ""}`;
+      return `Unshroud ${tok(action.amount)} ${label(action.asset)} to ${action.to === self ? "this wallet" : action.to}`;
   }
 }
 

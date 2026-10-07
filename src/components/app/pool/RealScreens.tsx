@@ -67,23 +67,11 @@ function AmountField({ asset, text, setText, max }: { asset: Asset; text: string
   );
 }
 
-function RelayerToggle({ on, setOn, asset }: { on: boolean; setOn: (v: boolean) => void; asset: Asset }) {
-  const pool = usePool();
-  const relayer = pool.relayer && (asset === "eth" || pool.relayer.acceptsTokenFees) ? pool.relayer : null;
+function GasNote() {
   return (
-    <label className="mt-4 flex cursor-pointer items-start gap-3 text-[14.5px]">
-      <input type="checkbox" checked={on && Boolean(relayer)} disabled={!relayer} onChange={(e) => setOn(e.target.checked)} className="mt-1 size-4 accent-[var(--color-fg)]" />
-      <span>
-        <span className="font-semibold">Use a relayer</span>
-        <span className="block text-[13px] text-fg-3">
-          {relayer
-            ? `${shortAddress(relayer.address)} submits the transaction and pays the gas; its fee comes out of your notes. Your wallet does not appear on chain.`
-            : pool.relayer
-              ? `This relayer takes ETH fees only. For ${BRAND.ticker}, your own wallet submits the transaction and pays the gas, which shows that wallet as the sender.`
-              : "No relayer is set up for this site (Settings). Your own wallet will submit the transaction and pay the gas, which shows that wallet as the sender."}
-        </span>
-      </span>
-    </label>
+    <p className="mt-4 text-[13px] leading-relaxed text-fg-3">
+      Your connected wallet submits this transaction and pays the gas in ETH, so it shows as the sender. The proof hides which notes are spent.
+    </p>
   );
 }
 
@@ -264,13 +252,11 @@ export function RealUnshroud() {
   const [asset, setAsset] = useState<Asset>("eth");
   const [text, setText] = useState("");
   const [to, setTo] = useState("");
-  const [viaRelayer, setViaRelayer] = useState(true);
   if (!address) return null;
   const amount = text ? parseUnits(text, dec(asset)) : null;
   const flat = asset === "eth" ? (pool.params?.unshroudFeeEth ?? 0n) : (pool.params?.unshroudFeeToken ?? 0n);
-  const relayFee = viaRelayer && pool.relayer && asset === "eth" ? BigInt(pool.relayer.feeEthWei) : viaRelayer && pool.relayer?.acceptsTokenFees && pool.relayer.feeTokenUnits ? BigInt(pool.relayer.feeTokenUnits) : 0n;
   const available = pool.privateBalance(asset);
-  const maxOut = available > flat + relayFee ? available - flat - relayFee : 0n;
+  const maxOut = available > flat ? available - flat : 0n;
   const dest = (to.trim() || address).toLowerCase();
   const validTo = /^0x[0-9a-f]{40}$/.test(dest);
   const problem = !text ? null : !amount ? "Enter a number." : amount > maxOut ? "More than your private balance after fees." : !validTo ? "Enter a full 0x address." : null;
@@ -286,11 +272,10 @@ export function RealUnshroud() {
         <span className="text-[14px] text-fg-2">Recipient address</span>
         <input value={to} onChange={(e) => setTo(e.target.value)} placeholder={address} className="field num mt-2 text-[14px]" data-testid="to" />
       </label>
-      <RelayerToggle on={viaRelayer} setOn={setViaRelayer} asset={asset} />
+      <GasNote />
       <Summary
         rows={[
           ["Unshroud fee (flat)", show(asset, flat)],
-          ["Relayer fee", relayFee ? show(asset, relayFee) : "none"],
           ["Recipient gets at least", amount ? show(asset, amount) : "–"],
           ["Visible on chain", "recipient and amount, not the note"],
         ]}
@@ -300,7 +285,7 @@ export function RealUnshroud() {
         type="button"
         disabled={!amount || Boolean(problem) || Boolean(pool.busy) || !pool.synced}
         onClick={async () => {
-          if (amount && (await pool.unshroud(asset, amount, dest, viaRelayer))) setText("");
+          if (amount && (await pool.unshroud(asset, amount, dest))) setText("");
         }}
         className="btn-ink mt-5 h-12 w-full rounded-full font-mono text-[14px]"
         data-testid="submit"
@@ -328,10 +313,8 @@ export function RealSend() {
   const [asset, setAsset] = useState<Asset>("oarkel");
   const [text, setText] = useState("");
   const [to, setTo] = useState("");
-  const [viaRelayer, setViaRelayer] = useState(true);
   const amount = text ? parseUnits(text, dec(asset)) : null;
   const bps = pool.params?.transferFeeBps ?? 10n;
-  const relayFee = viaRelayer && pool.relayer && asset === "eth" ? BigInt(pool.relayer.feeEthWei) : viaRelayer && pool.relayer?.acceptsTokenFees && pool.relayer.feeTokenUnits ? BigInt(pool.relayer.feeTokenUnits) : 0n;
   const fee = amount ? (asset === "eth" ? transferFeeFor(amount, bps) : pool.state ? transferFeeFor(sharesForAtMost(pool.state, amount), bps) : 0n) : 0n;
   const feeShown = asset === "eth" ? fee : pool.state ? valueOfShares(pool.state, fee) : 0n;
   const available = pool.privateBalance(asset);
@@ -340,7 +323,7 @@ export function RealSend() {
     ? null
     : !amount
       ? "Enter a number."
-      : amount + feeShown + relayFee > available
+      : amount + feeShown > available
         ? "More than your private balance after fees."
         : dest && !/^oarkel:[0-9a-fA-F]{128}$/.test(dest)
           ? "Enter a private address (oarkel:…)."
@@ -353,17 +336,16 @@ export function RealSend() {
     <>
       <AssetPick value={asset} onChange={setAsset} />
       <div className="mt-5">
-        <AmountField asset={asset} text={text} setText={setText} max={available > relayFee ? ((available - relayFee) * 10_000n) / (10_000n + bps) : 0n} />
+        <AmountField asset={asset} text={text} setText={setText} max={(available * 10_000n) / (10_000n + bps)} />
       </div>
       <label className="mt-4 block">
         <span className="text-[14px] text-fg-2">Recipient private address (from their Settings page)</span>
         <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="oarkel:…" className="field num mt-2 text-[14px]" data-testid="to" />
       </label>
-      <RelayerToggle on={viaRelayer} setOn={setViaRelayer} asset={asset} />
+      <GasNote />
       <Summary
         rows={[
           [`Transfer fee (${Number(bps) / 100}%)`, amount ? show(asset, feeShown) : "–"],
-          ["Relayer fee", relayFee ? show(asset, relayFee) : "none"],
           ["Recipient gets a note of", amount ? show(asset, amount) : "–"],
           ["Visible on chain", "that a transfer happened"],
         ]}
@@ -373,7 +355,7 @@ export function RealSend() {
         type="button"
         disabled={!amount || !dest || Boolean(problem) || Boolean(pool.busy) || !pool.synced}
         onClick={async () => {
-          if (amount && (await pool.send(asset, amount, dest, viaRelayer))) setText("");
+          if (amount && (await pool.send(asset, amount, dest))) setText("");
         }}
         className="btn-ink mt-5 h-12 w-full rounded-full font-mono text-[14px]"
         data-testid="submit"
@@ -453,7 +435,6 @@ export function RealSettings() {
   const pool = usePool();
   const { address, walletName, disconnect } = useWallet();
   const [copied, setCopied] = useState<string | null>(null);
-  const [url, setUrl] = useState(pool.relayerUrl);
   const copy = async (text: string, what: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -495,24 +476,14 @@ export function RealSettings() {
           </button>
         </div>
       </Panel>
-      <Panel title="Relayer">
+      <Panel title="Gas">
         <p className="text-[14px] leading-relaxed text-fg-2">
-          A relayer submits your proof and pays the gas, so your wallet never appears next to a private send or an exit. Anyone can run one
-          (keeper/ in the source). Its fee is bound into the proof; it cannot change the recipient or take more.
+          Every shroud, private send, merge and unshroud is sent from this wallet, which pays the gas in ETH. There is no relayer and no extra fee.
         </p>
-        <input value={url} onChange={(e) => setUrl(e.target.value.trim())} placeholder="https://relayer-one.example, https://relayer-two.example" className="field num mt-3 text-[14px]" aria-label="Relayer URLs" />
         <p className="mt-2 text-[12.5px] text-fg-3">
-          Several relayers, comma-separated: the first one that answers is used, the next one when it refuses. If none is available (a relayer
-          can pause itself), untick “Use a relayer” and submit from your own wallet: no relayer fee, your wallet pays the gas.
+          This wallet shows on chain as the sender of each of those transactions. The proof still hides which notes are spent, and an
+          unshroud can pay out to any address you choose.
         </p>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <button type="button" onClick={() => pool.setRelayerUrl(url)} className="btn-ghost inline-flex h-9 items-center rounded-full px-4 font-mono text-[12px]">
-            Use this relayer
-          </button>
-          <span className="text-[13px] text-fg-3">
-            {pool.relayer ? `Connected: ${shortAddress(pool.relayer.address)}` : pool.relayerUrl ? "Not reachable" : "None: your wallet submits"}
-          </span>
-        </div>
       </Panel>
       <Panel title="Keys">
         <div className="space-y-3 text-[14.5px] leading-relaxed text-fg-2">

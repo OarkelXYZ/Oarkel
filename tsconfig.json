@@ -39,7 +39,6 @@
   ],
   "exclude": [
     "node_modules",
-    "keeper/node_modules",
     "contracts/lib",
     ".next-e2e"
   ]

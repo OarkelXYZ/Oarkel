@@ -113,7 +113,8 @@ export const DOCS: Doc[] = [
               or move a note.
             </li>
             <li>
-              <strong>No gas wallet needed.</strong> A relayer can submit transactions for you and take its fee from the note.
+              <strong>Your wallet, your transactions.</strong> Every shroud, private send and unshroud is sent from your own wallet. No
+              third party handles your proof.
             </li>
           </ul>
         ),
@@ -519,7 +520,6 @@ export const DOCS: Doc[] = [
                 ["Shroud fee", "Each deposit into the pool", "Fee vault", "0.25%"],
                 ["Unshroud fee", "Each withdrawal, flat amount", "Fee vault", `0.0005 ETH or 20 ${T}`],
                 ["Private transfer fee", "Value sent to another key inside the pool", "Fee vault", "0.10%"],
-                ["Relayer fee", "Transactions sent through a relayer", "The relayer that paid the gas", "Set by each relayer, ETH only for now"],
               ]}
             />
             <Callout tone="warn">
@@ -581,7 +581,8 @@ export const DOCS: Doc[] = [
               <strong>Let time pass.</strong> The longer a note sits, the more deposits and withdrawals happen around it.
             </li>
             <li>
-              <strong>Use a relayer.</strong> Funding a fresh address with gas from your main wallet reconnects them.
+              <strong>Mind the sender.</strong> The wallet you connect sends every transaction and pays its gas, so it shows on chain
+              next to each private send and exit. Unshroud to a fresh address rather than back to that wallet.
             </li>
             <li>
               <strong>Mind the network layer.</strong> {N} cannot mask your IP address; the RPC you use and the sites you visit can still
@@ -757,7 +758,10 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
             <li>Each published nullifier is computed correctly from its input note.</li>
             <li>Inputs equal outputs plus the public exit amount plus fees, for the same asset.</li>
             <li>Every output commitment is well formed.</li>
-            <li>The recipient, relayer and relayer fee match the transaction, through a hash of that data.</li>
+            <li>
+              The recipient, relayer and relayer fee match the transaction, through a hash of that data. This site always submits from
+              your own wallet, so its proofs name no relayer and a relayer fee of zero.
+            </li>
           </ul>
         ),
       },
@@ -828,46 +832,51 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
 
   /* ---------------------------------------------------------------- */
   {
-    slug: "relayer",
+    slug: "gas",
     group: "Protocol",
-    nav: "Relayers and gas",
-    h1: "Relayers and gas",
-    lede: "Using the pool without holding ETH for gas.",
-    title: "Relayers and Gas",
-    description: `How ${N} relayers submit private transfers and unshrouds and pay the gas, taking their fee from the note so your exit address needs no ETH.`,
-    keyword: "gasless relayer",
+    nav: "Gas and your wallet",
+    h1: "Gas and your wallet",
+    lede: "Who sends each transaction, and what that shows on chain.",
+    title: "Gas and Your Wallet",
+    description: `How ${N} transactions are sent: your own wallet submits every shroud, private send and unshroud and pays the gas in ETH, with no extra fee.`,
+    keyword: "privacy pool gas",
     sections: [
       {
-        id: "why",
-        h: "Why gas is a privacy problem",
+        id: "who",
+        h: "Your wallet sends everything",
         body: (
           <p>
-            A fresh address cannot send a transaction until it holds ETH for gas, and funding it out of your everyday wallet links the two.
-            Relayers remove that step.
+            Every shroud, private send, merge and unshroud is a transaction from the wallet you connect. It pays the gas in ETH, the same
+            as any other transaction on {C}. There is no relayer and no service in between, and no fee beyond the pool&apos;s own rates.
           </p>
         ),
       },
       {
-        id: "how",
-        h: "How relaying works",
+        id: "proof",
+        h: "What the proof fixes",
         body: (
           <p>
-            You build the proof in your browser with the relayer&apos;s fee written into it, then hand the proof to a relayer. The relayer
-            submits the transaction and pays the gas; the pool pays the relayer its fee out of the spent note. Only the relayer named in the
-            proof can submit it, and it cannot alter where the money goes or how much, because the recipient, the relayer and the fee are
-            all bound into the proof.
+            You build the proof in your browser and your wallet submits it. The recipient and amounts are bound into the proof, so nobody
+            can change where the money goes or how much. The pool contract has a relayer field in each proof; this site always sets it to
+            the zero address with a fee of zero, which lets your own wallet send it.
           </p>
         ),
       },
       {
-        id: "open",
-        h: "Anyone can relay",
+        id: "visible",
+        h: "What the sender reveals",
         body: (
-          <p>
-            Relaying is permissionless. The relayer software is open source (<code>keeper/</code> in the repository), and anyone can run
-            one and set its own fee, in ETH for now. A spend without a relayer fee can be submitted by anyone, including your own wallet,
-            so if every relayer is down you only lose the gas convenience, never access to your notes.
-          </p>
+          <>
+            <p>
+              The sending wallet is public: it shows on chain next to each private send and unshroud. The proof still hides which notes are
+              spent and who owns them, and an unshroud can pay out to any address.
+            </p>
+            <ul>
+              <li>Keep a little ETH in the connected wallet for gas.</li>
+              <li>Unshroud to a fresh address rather than back to the wallet that shrouded.</li>
+              <li>The address that receives an unshroud needs no ETH: it only receives.</li>
+            </ul>
+          </>
         ),
       },
     ],
@@ -979,13 +988,13 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
                 ],
                 [
                   <code key="2">transact(proof, args, ext)</code>,
-                  "The named relayer, or anyone when no relayer is paid",
+                  "Anyone with a valid proof (this site: your own wallet)",
                   "Private send: two notes in, two out. Value sent to another key pays the transfer fee, enforced inside the proof",
                 ],
                 [
                   <code key="3">unshroud(proof, args, ext)</code>,
-                  "The named relayer, or anyone when there is no relayer fee",
-                  "Withdraws to any address, minus the flat fee and an optional relayer fee",
+                  "Anyone with a valid proof (this site: your own wallet)",
+                  "Withdraws to any address, minus the flat fee",
                 ],
                 [<code key="4">donate(amount)</code>, "Anyone", `Adds ${T} to the vault backing`],
                 [<code key="5">sweepEthFees()</code>, "Anyone", "Sends accrued ETH fees to the fee address fixed at deploy"],
@@ -1253,7 +1262,6 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
               ["Private transfer fee", "0.10%", "Deploy default"],
               ["Unshroud fee", `0.0005 ETH or 20 ${T}, flat`, "Deploy default"],
               ["Maximum fee", "5% (500 bps)", "Enforced by the constructor"],
-              ["Relayer fee", "Set by each relayer, ETH only for now", "Bound into the proof"],
               ["Merkle tree depth", "24", "In the code"],
               ["Recent roots accepted", "100", "In the code"],
               ["Largest note value", "2^120", "In the code"],
@@ -1270,7 +1278,7 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
         body: (
           <p>
             The practice app uses the same defaults: a 0.25% shroud fee, a 0.10% private transfer fee and a flat unshroud fee of 0.0005
-            ETH or 20 {T}, plus a suggested relayer fee of 0.0002 ETH or 8 {T}. Practice balances have no value.
+            ETH or 20 {T}. Practice balances have no value.
           </p>
         ),
       },
@@ -1285,7 +1293,7 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
     h1: "Glossary",
     lede: `Terms used across the ${N} site and docs.`,
     title: "Glossary",
-    description: `Glossary of ${N} terms: shroud, unshroud, note, commitment, nullifier, root, vault share, relayer, viewing key and anonymity set, explained briefly.`,
+    description: `Glossary of ${N} terms: shroud, unshroud, note, commitment, nullifier, root, vault share, viewing key and anonymity set, explained briefly.`,
     keyword: "privacy glossary",
     sections: [
       {
@@ -1300,7 +1308,6 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
                 ["Exit", "Another word for unshroud: withdrawing value back to an ordinary address."],
                 ["Note", "Private balance entry inside the pool, readable only with the owner's keys."],
                 ["Nullifier", "Revealed on spending; blocks double spends without exposing the note."],
-                ["Relayer", "A service that submits your transaction and pays gas, paid from the note."],
                 ["Root", "Summary hash of every commitment so far; each proof names one."],
                 ["Shielded address", "What you share to receive private payments."],
                 ["Shroud", "Move public value in, receiving a note."],
@@ -1378,7 +1385,7 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
     h1: "Roadmap",
     lede: "The planned sequence. Intentions, not guarantees.",
     title: "Roadmap",
-    description: `The ${N} roadmap: private pool and holder yield first, then relayers and private settlement, private swaps and community privacy coins on ${C}.`,
+    description: `The ${N} roadmap: private pool and holder yield first, then private settlement, private swaps and community privacy coins on ${C}.`,
     keyword: "privacy protocol roadmap",
     sections: [
       {
@@ -1404,10 +1411,9 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
       },
       {
         id: "then",
-        h: "Then: relayers and private settlement",
+        h: "Then: private settlement",
         body: (
           <ul>
-            <li>Public relayers run by anyone with the open-source relayer, so no exit address ever needs gas.</li>
             <li>Payment receipts and scoped viewing keys for business use.</li>
           </ul>
         ),

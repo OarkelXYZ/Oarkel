@@ -315,7 +315,7 @@ function Stage({ i }: { i: number }) {
     case 1:
       return <ProofStage />;
     case 2:
-      return <RelayStage />;
+      return <SubmitStage />;
     case 3:
       return <KeyStage />;
     case 4:
@@ -365,14 +365,14 @@ function ProofStage() {
   );
 }
 
-function RelayStage() {
+function SubmitStage() {
   return (
     <div className="flex flex-col items-center gap-3 font-mono text-[11.5px]">
-      <span className={chip}>fresh address · 0 ETH</span>
+      <span className={chip}>proof built in your browser</span>
       <span className="h-5 w-px bg-line-2" />
-      <span className="rounded-[4px] border border-line-2 bg-paper px-4 py-2 text-fg">relayer pays the gas</span>
+      <span className="rounded-[4px] border border-line-2 bg-paper px-4 py-2 text-fg">your wallet submits it</span>
       <span className="h-5 w-px bg-line-2" />
-      <span className="rounded-[4px] border border-surge/70 bg-paper px-4 py-2 text-fg">fee comes out of the note</span>
+      <span className="rounded-[4px] border border-surge/70 bg-paper px-4 py-2 text-fg">no third party, no extra fee</span>
     </div>
   );
 }

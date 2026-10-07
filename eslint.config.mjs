@@ -22,7 +22,6 @@ const eslintConfig = defineConfig([
     "contracts/lib/**",
     "contracts/out/**",
     "contracts/cache/**",
-    "keeper/node_modules/**",
     "public/zk/**",
   ]),
 ]);

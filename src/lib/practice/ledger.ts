@@ -24,7 +24,6 @@ export const RULES = {
   shroudBps: 25n,
   transferBps: 10n,
   unshroudFlat: { eth: 500, oarkel: 20 * MICRO } as Record<Asset, number>,
-  relayerFee: { eth: 200, oarkel: 8 * MICRO } as Record<Asset, number>,
   /** ETH fees are converted for the vault at this fixed practice rate (not a price). */
   oarkelPerEth: 40_000,
   min: { eth: 1_000, oarkel: 1 * MICRO } as Record<Asset, number>,
@@ -358,23 +357,21 @@ export async function unshroud(
   asset: Asset,
   amount: number,
   to: string,
-  relayer: boolean,
 ): Promise<Done | Failure> {
   return run(store, async (ctx) => {
     const a = await load(store, ctx, address);
     if (!a) return { error: "Open a practice account first.", status: 404 };
     const fee = RULES.unshroudFlat[asset];
-    const relay = relayer ? RULES.relayerFee[asset] : 0;
-    const spent = spend(ctx, a, asset, BigInt(amount + fee + relay));
+    const spent = spend(ctx, a, asset, BigInt(amount + fee));
     if (!spent) return { error: `Not enough private practice ${label(asset)} for that plus the fees.`, status: 400 };
     addNote(a, spent.change);
     if (asset === "eth") {
       donate(ctx, asset, fee);
     } else {
-      // Burn the spent shares; the amount and the relayer fee leave the backing, the exit fee stays in it.
+      // Burn the spent shares; the amount leaves the backing, the exit fee stays in it.
       const v = vaultOf(ctx);
       ctx.vault.shares = (v.shares - spent.burnShares).toString();
-      ctx.vault.backing = (v.backing - BigInt(amount + relay)).toString();
+      ctx.vault.backing = (v.backing - BigInt(amount)).toString();
       ctx.vault.fees = (BigInt(ctx.vault.fees) + BigInt(fee)).toString();
       ctx.vault.donations += 1;
     }
@@ -387,7 +384,7 @@ export async function unshroud(
     }
     ctx.stats.unshrouds += 1;
     const dest = to === address ? "your own address" : `${to.slice(0, 6)}…${to.slice(-4)}`;
-    log(ctx, address, "unshroud", `Unshrouded ${tok(amount)} ${label(asset)} to ${dest}${relayer ? " via relayer" : ""}`);
+    log(ctx, address, "unshroud", `Unshrouded ${tok(amount)} ${label(asset)} to ${dest}`);
     return { ok: true, summary: `Unshrouded ${tok(amount)} ${label(asset)} to ${dest}.` };
   });
 }

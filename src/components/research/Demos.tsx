@@ -219,13 +219,13 @@ export function CrowdDemo() {
   const [grid, setGrid] = useState(true);
   const [batch, setBatch] = useState(true);
   const [newestRoot, setNewestRoot] = useState(true);
-  const [relayer, setRelayer] = useState(true);
+  const [freshExit, setFreshExit] = useState(true);
   // Each leak that is not closed divides the plausible senders by a modelled factor.
   let set = pool;
   if (!grid) set /= 40;
   if (!batch) set /= 12;
   if (!newestRoot) set /= 6;
-  if (!relayer) set /= 25;
+  if (!freshExit) set /= 25;
   set = Math.max(1, Math.round(set));
   const bits = Math.log2(set);
   return (
@@ -234,7 +234,7 @@ export function CrowdDemo() {
         <Toggle on={grid} onChange={setGrid} label="Round exit amounts" />
         <Toggle on={batch} onChange={setBatch} label="Batched exits" />
         <Toggle on={newestRoot} onChange={setNewestRoot} label="Newest root" />
-        <Toggle on={relayer} onChange={setRelayer} label="Relayer pays gas" />
+        <Toggle on={freshExit} onChange={setFreshExit} label="Exit to a fresh address" />
       </div>
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Stat k="Notes in the pool" v={pool.toLocaleString("en-US")} />

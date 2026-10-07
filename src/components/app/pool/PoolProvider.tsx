@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { BRAND, CHAIN } from "@/config/brand";
-import { CONTRACTS, RELAYER_URL } from "@/config/contracts";
+import { CONTRACTS } from "@/config/contracts";
 import { useWallet } from "@/components/wallet/WalletProvider";
 import {
   bpsFee,
@@ -12,8 +12,6 @@ import {
   prove,
   readParams,
   readState,
-  relay,
-  relayerInfo,
   sharesForAtLeast,
   sharesForAtMost,
   simulate,
@@ -25,7 +23,6 @@ import {
   warmProver,
   type MyNote,
   type PoolParams,
-  type RelayerInfo,
 } from "@/lib/pool/client";
 import { ASSET_ETH, ASSET_TOKEN, decodeAddress, deriveKeys, encodeAddress, encryptNote, keyDomain, keyMessage, ownerHash, randomField, type NoteKeys } from "@/lib/zk/core";
 import { encodeApprove, encodeShroud, encodeTransact, encodeUnshroud, type LeafRecord, type PoolState } from "@/lib/zk/calls";
@@ -36,6 +33,8 @@ import { ZERO_ADDRESS, buildSpend, pickNotes, transferFeeFor, type OwnedNote } f
  * (SIWE message bound to this site) plus an optional passphrase and live only
  * in this component's memory: they are never stored, logged or sent anywhere.
  * Reloading the page forgets them; signing again restores the same keys.
+ * Every transaction is submitted by the connected wallet itself: proofs always
+ * name the zero address as relayer with a zero relayer fee.
  */
 
 export type Asset = "eth" | "oarkel";
@@ -60,12 +59,9 @@ type Pool = {
   error: string | null;
   notice: { text: string; tx?: string } | null;
   activity: ActivityItem[];
-  relayer: RelayerInfo | null;
-  relayerUrl: string;
-  setRelayerUrl: (url: string) => void;
   shroud: (asset: Asset, amount: bigint) => Promise<boolean>;
-  send: (asset: Asset, amount: bigint, to: string, viaRelayer: boolean) => Promise<boolean>;
-  unshroud: (asset: Asset, amount: bigint, to: string, viaRelayer: boolean) => Promise<boolean>;
+  send: (asset: Asset, amount: bigint, to: string) => Promise<boolean>;
+  unshroud: (asset: Asset, amount: bigint, to: string) => Promise<boolean>;
   merge: (asset: Asset) => Promise<boolean>;
   refresh: () => void;
   clear: () => void;
@@ -97,12 +93,6 @@ export function PoolProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ text: string; tx?: string } | null>(null);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
-  const [relayerUrl, setRelayerUrl] = useState(RELAYER_URL);
-  // Relayers that refused work in this session; the next one in the list is used instead.
-  const [down, setDown] = useState<string[]>([]);
-  const [relayerSeen, setRelayerSeen] = useState<{ list: string; url: string; info: RelayerInfo | null } | null>(null);
-  const relayer = relayerSeen && relayerSeen.list === relayerUrl + "|" + down.join(",") ? relayerSeen.info : null;
-  const activeRelayerUrl = relayer ? (relayerSeen?.url ?? "") : "";
   const [tick, setTick] = useState(0);
 
   const leavesRef = useRef<LeafRecord[]>([]);
@@ -127,27 +117,6 @@ export function PoolProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     readParams().then(setParams).catch(() => setParams(null));
   }, []);
-
-  useEffect(() => {
-    const urls = relayerUrl.split(",").map((u) => u.trim()).filter((u) => u && !down.includes(u));
-    const key = relayerUrl + "|" + down.join(",");
-    let cancelled = false;
-    (async () => {
-      for (const url of urls) {
-        try {
-          const info = await relayerInfo(url);
-          if (!cancelled) setRelayerSeen({ list: key, url, info });
-          return;
-        } catch {
-          // try the next relayer
-        }
-      }
-      if (!cancelled) setRelayerSeen({ list: key, url: "", info: null });
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [relayerUrl, down]);
 
   const log = useCallback((kind: string, text: string, tx?: string) => {
     setActivity((a) => [{ t: Date.now(), kind, text, tx }, ...a].slice(0, 50));
@@ -313,9 +282,8 @@ export function PoolProvider({ children }: { children: React.ReactNode }) {
   /* ---------------------------------------------------------- spends */
 
   const spendNotes = useCallback(
-    async (opts: { asset: Asset; inputs: OwnedNote[]; pay?: { pk: bigint; viewPub: Uint8Array; value: bigint }; exitValue: bigint; recipient: string; viaRelayer: boolean; relayerFee: bigint; kind: "transact" | "unshroud" }) => {
+    async (opts: { asset: Asset; inputs: OwnedNote[]; pay?: { pk: bigint; viewPub: Uint8Array; value: bigint }; exitValue: bigint; recipient: string; kind: "transact" | "unshroud" }) => {
       if (!keys || !params || !address) throw new Error("Unlock your notes first.");
-      const useRelayer = opts.viaRelayer && relayer && activeRelayerUrl;
       const plan = buildSpend({
         keys,
         asset: assetId(opts.asset),
@@ -325,91 +293,59 @@ export function PoolProvider({ children }: { children: React.ReactNode }) {
         exitValue: opts.exitValue,
         feeBps: params.transferFeeBps,
         recipient: opts.recipient,
-        relayer: useRelayer ? relayer.address : ZERO_ADDRESS,
-        relayerFee: useRelayer ? opts.relayerFee : 0n,
+        // Self-submit: no relayer is named and none is paid, so the connected wallet sends the transaction.
+        relayer: ZERO_ADDRESS,
+        relayerFee: 0n,
         chainId: CHAIN.id,
         pool: CONTRACTS.pool,
       });
       setBusy("Proving on this device…");
       const { proof } = await prove(plan.witness);
       const data = opts.kind === "transact" ? encodeTransact(proof, plan.args, plan.ext) : encodeUnshroud(proof, plan.args, plan.ext);
-      if (useRelayer) {
-        setBusy("Checking…");
-        await simulate({ from: relayer.address, to: CONTRACTS.pool, data });
-        setBusy("Sending through the relayer…");
-        let hash: string;
-        try {
-          hash = await relay(activeRelayerUrl, opts.kind, data);
-        } catch (cause) {
-          // This proof names this relayer, so it cannot be handed to another one: prove again with the next.
-          setDown((d) => [...d, activeRelayerUrl]);
-          const why = cause instanceof Error ? cause.message : "The relayer refused.";
-          throw new Error(`${why} The next relayer (if any) will be used on your next try, or untick “Use a relayer” to submit from your own wallet with no relayer fee.`);
-        }
-        setBusy("Waiting for the block…");
-        await waitReceipt(hash);
-        return hash;
-      }
       return submitWallet({ to: CONTRACTS.pool, data });
     },
-    [keys, params, address, relayer, activeRelayerUrl, submitWallet],
-  );
-
-  const relayerFeeFor = useCallback(
-    (asset: Asset, viaRelayer: boolean) => {
-      if (!viaRelayer || !relayer) return 0n;
-      if (asset === "eth") return BigInt(relayer.feeEthWei);
-      return relayer.acceptsTokenFees && relayer.feeTokenUnits ? BigInt(relayer.feeTokenUnits) : 0n;
-    },
-    [relayer],
+    [keys, params, address, submitWallet],
   );
 
   const unshroud = useCallback(
-    (asset: Asset, amount: bigint, to: string, wantRelayer: boolean) =>
+    (asset: Asset, amount: bigint, to: string) =>
       run(async () => {
-        // A relayer that does not take token fees cannot carry a token spend: the wallet submits it.
-        const viaRelayer = wantRelayer && Boolean(relayer) && (asset === "eth" || Boolean(relayer?.acceptsTokenFees));
         if (!params || !state) throw new Error("Still loading the pool.");
-        const fee = relayerFeeFor(asset, viaRelayer);
         const flat = asset === "eth" ? params.unshroudFeeEth : params.unshroudFeeToken;
-        const gross = amount + flat + fee;
+        const gross = amount + flat;
         const exitValue = asset === "eth" ? gross : sharesForAtLeast(state, gross);
         const mine = notes.filter((n) => n.asset === assetId(asset));
         const picked = pickNotes(mine, exitValue);
         if (!picked) throw new Error(mine.length > 2 ? "This needs more than two notes. Merge your notes first (button below), then try again." : "Not enough in your private balance for that plus fees.");
-        const hash = await spendNotes({ asset, inputs: picked, exitValue, recipient: to, viaRelayer, relayerFee: fee, kind: "unshroud" });
+        const hash = await spendNotes({ asset, inputs: picked, exitValue, recipient: to, kind: "unshroud" });
         log("unshroud", `Unshrouded ${fmt(amount, decimals(asset))} ${label(asset)} to ${to.slice(0, 8)}…`, hash);
         setNotice({ text: `Unshrouded ${fmt(amount, decimals(asset))} ${label(asset)}.`, tx: hash });
         return null;
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [run, params, state, notes, relayer, relayerFeeFor, spendNotes, log],
+    [run, params, state, notes, spendNotes, log],
   );
 
   const send = useCallback(
-    (asset: Asset, amount: bigint, to: string, wantRelayer: boolean) =>
+    (asset: Asset, amount: bigint, to: string) =>
       run(async () => {
-        // A relayer that does not take token fees cannot carry a token spend: the wallet submits it.
-        const viaRelayer = wantRelayer && Boolean(relayer) && (asset === "eth" || Boolean(relayer?.acceptsTokenFees));
         if (!params || !state || !keys) throw new Error("Still loading the pool.");
         const dest = decodeAddress(to);
         if (!dest) throw new Error("That is not an Oarkel private address (it starts with oarkel:).");
         if (dest.pk === keys.pk) throw new Error("That is your own private address.");
-        const fee = relayerFeeFor(asset, viaRelayer);
         const payValue = asset === "eth" ? amount : sharesForAtMost(state, amount);
         if (payValue === 0n) throw new Error("That amount is too small.");
-        const exitValue = fee === 0n ? 0n : asset === "eth" ? fee : sharesForAtLeast(state, fee);
-        const need = payValue + transferFeeFor(payValue, params.transferFeeBps) + exitValue;
+        const need = payValue + transferFeeFor(payValue, params.transferFeeBps);
         const mine = notes.filter((n) => n.asset === assetId(asset));
         const picked = pickNotes(mine, need);
         if (!picked) throw new Error(mine.length > 2 ? "This needs more than two notes. Merge your notes first, then try again." : "Not enough in your private balance for that plus fees.");
-        const hash = await spendNotes({ asset, inputs: picked, pay: { pk: dest.pk, viewPub: dest.viewPub, value: payValue }, exitValue, recipient: ZERO_ADDRESS, viaRelayer, relayerFee: fee, kind: "transact" });
+        const hash = await spendNotes({ asset, inputs: picked, pay: { pk: dest.pk, viewPub: dest.viewPub, value: payValue }, exitValue: 0n, recipient: ZERO_ADDRESS, kind: "transact" });
         log("send", `Sent ${fmt(amount, decimals(asset))} ${label(asset)} privately`, hash);
         setNotice({ text: `Sent ${fmt(amount, decimals(asset))} ${label(asset)} privately.`, tx: hash });
         return null;
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [run, params, state, keys, notes, relayer, relayerFeeFor, spendNotes, log],
+    [run, params, state, keys, notes, spendNotes, log],
   );
 
   const merge = useCallback(
@@ -418,7 +354,7 @@ export function PoolProvider({ children }: { children: React.ReactNode }) {
         const mine = notes.filter((n) => n.asset === assetId(asset)).sort((a, b) => (a.value < b.value ? -1 : 1));
         if (mine.length < 2) throw new Error("Nothing to merge.");
         // Merge the two smallest into one note to self: no transfer fee, wallet pays gas.
-        const hash = await spendNotes({ asset, inputs: mine.slice(0, 2), exitValue: 0n, recipient: ZERO_ADDRESS, viaRelayer: false, relayerFee: 0n, kind: "transact" });
+        const hash = await spendNotes({ asset, inputs: mine.slice(0, 2), exitValue: 0n, recipient: ZERO_ADDRESS, kind: "transact" });
         log("merge", `Merged two ${label(asset)} notes`, hash);
         setNotice({ text: "Two notes merged into one.", tx: hash });
         return null;
@@ -448,12 +384,6 @@ export function PoolProvider({ children }: { children: React.ReactNode }) {
     error,
     notice,
     activity,
-    relayer,
-    relayerUrl,
-    setRelayerUrl: (url: string) => {
-      setDown([]);
-      setRelayerUrl(url);
-    },
     shroud,
     send,
     unshroud,
