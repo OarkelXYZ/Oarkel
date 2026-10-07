@@ -66,7 +66,7 @@ export function SiteFooter() {
         <div className="mt-12 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <CopyCaBlock tone="night" className="w-full max-w-xl" />
           <p className="font-mono text-[12px] text-white/50">
-            {poolLive() ? "Pool live on Robinhood Chain" : "Contracts written, not deployed yet · the app runs in practice mode"}
+            {poolLive() ? "Pool live on Robinhood Chain" : "Pool not live yet · the app runs in practice mode"}
           </p>
         </div>
         <div className="mt-10 flex flex-col gap-4 border-t border-white/10 pt-6 lg:flex-row lg:items-center lg:justify-between">

@@ -7,7 +7,7 @@ import { RealOverview } from "@/components/app/pool/RealScreens";
 
 export const metadata: Metadata = pageMeta({
   title: "App",
-  description: `${BRAND.name} app in practice mode: your private notes, public practice balance and the shared fee vault, with live Robinhood Chain data.`,
+  description: `${BRAND.name} app: your private notes, your public balance and the shared fee vault on Robinhood Chain.`,
   path: "/app",
   index: false,
 });

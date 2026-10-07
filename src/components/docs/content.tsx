@@ -125,22 +125,23 @@ export const DOCS: Doc[] = [
         body: (
           <>
             <p>
-              Be clear about this before anything else: <strong>the {N} contracts are written and tested, but not deployed.</strong> There
-              is no contract to deposit into yet, and the {T} contract address has not been published.
+              <strong>The {N} pool is live on {C}.</strong> The pool, its proof verifier and their libraries are deployed and verified, and
+              the {T} contract address is published on this site.
             </p>
             <p>What works today on this site:</p>
             <ul>
               <li>Connecting an EVM wallet, with {C} added automatically.</li>
               <li>Live chain readings: latest block, gas price and the Chainlink ETH/USD feed on {C}.</li>
               <li>
-                The full <Link href="/app">app</Link> in practice mode: shroud, hold, send and unshroud with practice balances. Every
-                action is a free wallet signature, no transaction is sent and no real value moves.
+                The <Link href="/app">app</Link>: shroud, hold, send and unshroud with real ETH and {T}. Every action is a transaction you
+                sign from your own wallet, and the proof is built in your browser.
               </li>
             </ul>
             <Callout tone="warn">
-              Any claim in these docs about immutability, the missing owner and admin function, or fees describes the contract code as
-              written. It becomes a fact on chain once those contracts are deployed, their addresses are published on the{" "}
-              <Link href="/docs/deployments">deployments page</Link> and the code is verified on the explorer.
+              Every claim in these docs about immutability, the missing owner and admin function, or fees can be checked on chain: the
+              addresses are on the <Link href="/docs/deployments">deployments page</Link>, the code is verified on the explorer, and{" "}
+              <code>npm run verify-deployment</code> compares it with this repository. The contracts cannot be upgraded, so use amounts
+              you are prepared to lose.
             </Callout>
           </>
         ),
@@ -160,7 +161,7 @@ export const DOCS: Doc[] = [
               <Link href="/docs/trust-model">Team powers</Link>: what the team will and will not be able to do.
             </li>
             <li>
-              <Link href="/docs/get-started">First steps</Link>: walk through the practice app in five minutes.
+              <Link href="/docs/get-started">First steps</Link>: shroud, send and unshroud in five minutes.
             </li>
           </ul>
         ),
@@ -262,10 +263,10 @@ export const DOCS: Doc[] = [
     slug: "get-started",
     group: `Using ${N}`,
     nav: "First steps",
-    h1: "Get started with the practice app",
-    lede: "Five minutes, one wallet, no funds at risk.",
+    h1: "Get started with the pool",
+    lede: "One wallet, a little ETH for gas, and about five minutes.",
     title: "Get Started",
-    description: `Try ${N} before launch: connect a wallet to ${C}, open a practice account, then shroud, hold, send and unshroud without moving real funds.`,
+    description: `Use ${N} on ${C}: connect a wallet, unlock your notes, then shroud, hold, send privately and unshroud ETH or ${T}.`,
     keyword: "how to use private pool",
     sections: [
       {
@@ -275,19 +276,29 @@ export const DOCS: Doc[] = [
           <p>
             Press <strong>Connect wallet</strong> in the header and pick any EVM wallet that can add a custom network, such as MetaMask,
             Rabby or OKX Wallet. The site asks your wallet to add {C} (chain id {CHAIN.id}) and switch to it. Phantom cannot add custom
-            networks, so it is listed but disabled.
+            networks, so it is listed but disabled. Keep a little ETH in the wallet: every pool action is a transaction you send yourself.
           </p>
         ),
       },
       {
-        id: "open",
-        h: "2. Open a practice account",
+        id: "unlock",
+        h: "2. Unlock your notes",
         body: (
-          <p>
-            In the <Link href="/app">app</Link>, press <strong>Open practice account</strong> and sign the message your wallet shows. The
-            signature costs nothing and sends no transaction. You receive a practice public balance of ETH and {T} to experiment with.
-            Practice balances have no value and cannot be withdrawn anywhere.
-          </p>
+          <>
+            <p>
+              In the <Link href="/app">app</Link>, press <strong>Sign to unlock</strong>. Your wallet signs a sign-in message for{" "}
+              {BRAND.domain}; that signature becomes the keys that own and read your private notes. It is not a transaction, costs nothing
+              and never leaves the browser tab.
+            </p>
+            <p>
+              You can add a passphrase of at least 8 characters. It is mixed into your keys, so the signature alone cannot spend your notes.
+              See <Link href="/docs/keys">keys</Link> for how this works.
+            </p>
+            <Callout tone="warn">
+              Sign only on {BRAND.domain}, and check that your wallet shows that domain. If you add a passphrase and forget it, notes made
+              with it cannot be recovered by anyone, including the team.
+            </Callout>
+          </>
         ),
       },
       {
@@ -295,9 +306,9 @@ export const DOCS: Doc[] = [
         h: "3. Shroud something",
         body: (
           <p>
-            On the <strong>Shroud</strong> tab, pick ETH or {T}, enter an amount and sign. The practice pool takes the 0.25% shroud fee,
-            the contract default, and gives you a note with a fresh commitment. Your public practice balance drops; your private balance, visible only to you,
-            rises.
+            On the <strong>Shroud</strong> tab, pick ETH or {T}, enter an amount and confirm in your wallet. The pool takes the 0.25% shroud
+            fee and records a private note for the rest. The deposit itself is public: anyone can see that your address put that amount
+            in. Your first {T} shroud asks for an approval first, so it takes two transactions. Start with a small amount.
           </p>
         ),
       },
@@ -306,9 +317,9 @@ export const DOCS: Doc[] = [
         h: "4. Hold and watch the vault",
         body: (
           <p>
-            The <strong>Overview</strong> tab shows your notes and the practice vault. Every practice fee paid by any visitor goes into
-            that vault, so the value of a shrouded {T} share moves only when real practice activity happens. Nothing is simulated on a
-            timer.
+            The <strong>Overview</strong> tab shows your notes, read from the chain and decrypted in your browser. {T} notes hold vault
+            shares: every fee paid in {T}, and every {T} donated from the ETH fees, raises the value of each share. ETH notes keep their
+            value and do not earn. See <Link href="/docs/pool-and-yield">pool and yield</Link>.
           </p>
         ),
       },
@@ -316,17 +327,26 @@ export const DOCS: Doc[] = [
         id: "spend",
         h: "5. Send or unshroud",
         body: (
-          <p>
-            <strong>Send</strong> pays another practice account privately: they receive a new note and your note is spent.{" "}
-            <strong>Unshroud</strong> withdraws to any address you type, minus the flat unshroud fee. Withdrawing to your own address puts
-            the value back in your public practice balance.
-          </p>
+          <>
+            <p>
+              <strong>Send</strong> pays someone privately: paste their private address (they copy it from their <strong>Settings</strong>{" "}
+              page), enter an amount and confirm. Your notes are spent and two new ones appear, one for them and one for your change. The
+              0.10% transfer fee applies to what you send.
+            </p>
+            <p>
+              <strong>Unshroud</strong> takes value out to any address you type, minus the flat 0.0005 ETH or 20 {T} fee. The recipient
+              and the amount are visible on chain; which note paid for it is not.
+            </p>
+            <p>
+              For both, your browser builds the proof in a few seconds and your connected wallet sends the transaction, so it shows as the
+              sender. Read <Link href="/docs/staying-private">staying private</Link> before moving larger amounts.
+            </p>
+          </>
         ),
       },
     ],
   },
 
-  /* ---------------------------------------------------------------- */
   {
     slug: "get-oarkel",
     group: `Using ${N}`,
@@ -478,9 +498,9 @@ export const DOCS: Doc[] = [
         h: "Receiving",
         body: (
           <p>
-            To be paid privately you share a <strong>shielded address</strong>, derived from your keys, instead of your wallet address. In
-            the practice app the recipient is simply another practice account, identified by its wallet address, so you can try the flow
-            with a second wallet.
+            To be paid privately you share a <strong>shielded address</strong>, derived from your keys, instead of your wallet address. The
+            app calls it your private address; copy it from the <strong>Settings</strong> page. It reveals nothing about your wallet or
+            your balance.
           </p>
         ),
       },
@@ -523,10 +543,10 @@ export const DOCS: Doc[] = [
               ]}
             />
             <Callout tone="warn">
-              These are the values the pool will be deployed with. Every rate is a constructor argument, fixed forever at deploy, and the
+              These are the values the pool was deployed with. Every rate is a constructor argument, fixed forever at deploy, and the
               contract refuses any fee above 5%. Fees paid in {T} raise the vault directly. Fees paid in ETH build up in the pool, anyone
               can sweep them to the fee address fixed at deploy, and the operator of that address is expected to swap them into {T} and
-              donate them. That last step is operated off-chain, not enforced by code. The practice app uses the same rates.
+              donate them. That last step is operated off-chain, not enforced by code.
             </Callout>
           </>
         ),
@@ -947,7 +967,7 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
     group: "Developers",
     nav: "Contracts",
     h1: "Contracts",
-    lede: "What the written pool contracts do: functions, events, errors and fixed settings. Not deployed yet.",
+    lede: "What the pool contracts do: functions, events, errors and fixed settings.",
     title: "Pool Contracts",
     description: `The ${N} smart contracts: OarkelPool functions for shroud, transact and unshroud, events, errors, fixed parameters and how to verify them.`,
     keyword: "privacy pool smart contract",
@@ -967,8 +987,8 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
               ]}
             />
             <p>
-              The libraries and the verifier hold no state. The contracts are written and tested but <strong>not deployed yet</strong>;
-              their addresses will be published on the <Link href="/docs/deployments">deployments page</Link> once they are live.
+              The libraries and the verifier hold no state. All five are deployed and verified; their addresses are on the{" "}
+              <Link href="/docs/deployments">deployments page</Link>.
             </p>
           </>
         ),
@@ -1178,12 +1198,11 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
       },
       {
         id: "unproven",
-        h: "Not deployed yet",
+        h: "Check it yourself",
         body: (
           <p>
-            The contracts are written and tested, but nothing is deployed, so none of the above can be checked on chain today. Once it
-            is, the <Link href="/docs/deployments">deployments page</Link> will list each address, and anyone can run{" "}
-            <code>npm run verify-deployment</code> to prove the bytecode matches this code.
+            Every item above can be checked on chain. The <Link href="/docs/deployments">deployments page</Link> lists each address, and
+            anyone can run <code>npm run verify-deployment</code> to prove the bytecode and constructor settings match this code.
           </p>
         ),
       },
@@ -1258,28 +1277,18 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
             rows={[
               ["Assets", `ETH (0), ${T} (1)`, "In the code"],
               ["Network", `${C} (${CHAIN.id})`, "Decided"],
-              ["Shroud fee", "0.25%", "Deploy default"],
-              ["Private transfer fee", "0.10%", "Deploy default"],
-              ["Unshroud fee", `0.0005 ETH or 20 ${T}, flat`, "Deploy default"],
+              ["Shroud fee", "0.25%", "Fixed at deploy"],
+              ["Private transfer fee", "0.10%", "Fixed at deploy"],
+              ["Unshroud fee", `0.0005 ETH or 20 ${T}, flat`, "Fixed at deploy"],
               ["Maximum fee", "5% (500 bps)", "Enforced by the constructor"],
               ["Merkle tree depth", "24", "In the code"],
               ["Recent roots accepted", "100", "In the code"],
               ["Largest note value", "2^120", "In the code"],
               ["Vault share offset", "1,000,000 virtual shares", "In the code"],
               ["Proof system and hash", "UltraHonk (Noir circuit), Poseidon; no project-specific trusted setup", "In the code"],
-              ["Fee address", "Fixed at deploy", "Not deployed yet"],
+              ["Fee address", addrCell(CONTRACTS.feeSink, "fs"), "Fixed at deploy"],
             ]}
           />
-        ),
-      },
-      {
-        id: "practice",
-        h: "Practice app values",
-        body: (
-          <p>
-            The practice app uses the same defaults: a 0.25% shroud fee, a 0.10% private transfer fee and a flat unshroud fee of 0.0005
-            ETH or 20 {T}. Practice balances have no value.
-          </p>
         ),
       },
     ],
@@ -1390,22 +1399,21 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
     sections: [
       {
         id: "now",
-        h: "Now: site, practice app, token launch",
+        h: "Now: site, token, pool",
         body: (
           <ul>
-            <li>This site, live chain readings and the practice app.</li>
-            <li>{T} launch on Pons, with the address published here first.</li>
-            <li>Pool contracts and proof circuit, written and tested, documented in these docs.</li>
+            <li>This site and live chain readings.</li>
+            <li>{T} launched on Pons, with the address published here.</li>
+            <li>The pool, its proof verifier and libraries, deployed and verified on {C}.</li>
           </ul>
         ),
       },
       {
         id: "next",
-        h: "Next: the pool and its fee vault",
+        h: "Next: fees into the vault",
         body: (
           <ul>
-            <li>Deploy the private pool for ETH and {T}, with the fee vault and flat exit fee, and publish every address here.</li>
-            <li>Fee harvester routing swept ETH fees and the creator fee into the vault, operated off-chain at first.</li>
+            <li>Fee harvester routing swept ETH fees and the creator fee into the vault as {T}, operated off-chain at first.</li>
           </ul>
         ),
       },

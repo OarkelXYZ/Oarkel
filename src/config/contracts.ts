@@ -1,8 +1,7 @@
 import { BRAND, CHAIN, isAddress } from "@/config/brand";
 
 /*
- * Oarkel contract addresses: the ONE place to fill in after deployment (the
- * owner page /deploy prints the exact lines).
+ * Oarkel contract addresses: the ONE place they are set (all live since 7 Oct 2026).
  *
  * Before the CA (none of these depend on the token):
  *   POSEIDON_T3, POSEIDON_T4          hash libraries the pool links to
@@ -21,9 +20,9 @@ const POSEIDON_T4 = "0xa4549b7d8c670a1d0982e8fbeda3c6d553d22f62";
 const ZK_TRANSCRIPT_LIB = "0x25f4f66a94ab605254df054e0e0259a7a2bfb5e3";
 const RELATIONS_LIB = "0xedb415e7c45c75baa05cf869147383aec3083772";
 const VERIFIER = "0x6d375cd1d74f9391f2306a1aa91639f269fe04a2";
-const POOL = "";
-const POOL_DEPLOY_BLOCK = 0;
-const FEE_SINK = "";
+const POOL = "0xf65100f07a4bbf57047d774ec683f5b741dd55f2";
+const POOL_DEPLOY_BLOCK = 82546758;
+const FEE_SINK = "0x1ed5e92e2b1d007e3646c26e76438ebc9fc2bf99";
 
 /**
  * Local end-to-end testing only (anvil): a JSON object passed at build time,

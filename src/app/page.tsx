@@ -54,7 +54,7 @@ function Hero() {
             </p>
             <div className="reveal-up mt-8 flex flex-wrap items-center gap-x-5 gap-y-4 md:gap-6" style={{ animationDelay: "0.22s" }}>
               <Link href="/app" className="btn-ink inline-flex h-11 items-center rounded-full px-6 text-[14px] font-medium md:px-7">
-                Try it in practice
+                Launch app
               </Link>
               <Link href="/#how-it-works" className="group inline-flex items-center gap-2 font-mono text-[13px] text-fg/70 md:text-[14px] transition-colors hover:text-fg">
                 See how it works <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
@@ -410,8 +410,8 @@ function Design() {
           Built so that nobody, including us, can touch a note.
         </h2>
         <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-fg-2">
-          These are the rules the {BRAND.name} contracts are written to. The contracts are written and tested but not deployed yet; each
-          rule will be checkable on the explorer the day they are.
+          These are the rules the {BRAND.name} contracts are written to. The contracts are deployed and verified on {CHAIN.name}; each
+          rule can be checked on the explorer today.
         </p>
       </div>
       <div className="mt-12 lg:mt-0">
@@ -459,7 +459,7 @@ function FinalCall() {
           Drop off the record.
         </h2>
         <p className="mt-6 max-w-xl text-[18px] leading-relaxed text-balance text-fg-2">
-          Connect a wallet and walk the whole flow with practice balances. Every step is a free signature; nothing is sent on chain.
+          Connect a wallet, unlock your notes and shroud your first ETH or {BRAND.symbol}. Start small; the pool is live on {CHAIN.name}.
         </p>
         <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
           <Link href="/app" className="btn-ink inline-flex h-[52px] items-center rounded-full px-8 font-mono text-[14px] font-semibold">

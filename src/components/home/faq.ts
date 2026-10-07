@@ -27,7 +27,7 @@ export const HOME_FAQ: [string, string][] = [
   ],
   [
     "Who controls the contracts?",
-    "Nobody. The pool contract has no owner, no admin function, no pause and no proxy, and every parameter is fixed in its constructor, so no team member can move, freeze or redirect a note. The contracts are written and tested but not deployed yet; their addresses will be published in the docs once they are live.",
+    "Nobody. The pool contract has no owner, no admin function, no pause and no proxy, and every parameter is fixed in its constructor, so no team member can move, freeze or redirect a note. The contracts are deployed and verified; their addresses are listed on the deployments page in the docs.",
   ],
   [
     `Does ${BRAND.name} make me anonymous?`,
@@ -35,7 +35,7 @@ export const HOME_FAQ: [string, string][] = [
   ],
   [
     "Which fees does Oarkel charge?",
-    `A creator fee on ${BRAND.symbol} trades, a 0.25% shroud fee, a 0.10% private transfer fee and a flat unshroud fee of 0.0005 ETH or 20 ${BRAND.symbol}. Those are the values the pool will be deployed with, and they are fixed forever at deploy; the contract refuses any fee above 5%. Gas is paid in ETH by the wallet that sends each transaction. The practice app uses the same rates.`,
+    `A creator fee on ${BRAND.symbol} trades, a 0.25% shroud fee, a 0.10% private transfer fee and a flat unshroud fee of 0.0005 ETH or 20 ${BRAND.symbol}. Those are the values the pool was deployed with, fixed forever; the contract refuses any fee above 5%. Gas is paid in ETH by the wallet that sends each transaction.`,
   ],
   [
     "Do I need ETH to shroud or unshroud?",

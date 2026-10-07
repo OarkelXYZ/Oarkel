@@ -4,9 +4,9 @@ Oarkel — Shroud $OARKEL or ETH. Hold privately. Earn passive yield. Immutable.
 
 **Public Chain. Private Balance.** Oarkel is a privacy protocol for Robinhood Chain: a shared pool where ETH and $OARKEL are held as private notes, and where the protocol's fees are designed to flow to private holders only. This repository holds the whole website, the practice engine behind its app, the pool contracts and their zero-knowledge circuit, and the tools used to check the token and any deployment against this code.
 
-Website: [oarkel.xyz](https://oarkel.xyz) · X: [@oarkelxyz](https://x.com/oarkelxyz) · Token contract: not published yet
+Website: [oarkel.xyz](https://oarkel.xyz) · X: [@oarkelxyz](https://x.com/oarkelxyz) · Token contract: `0xb34ceb0a58d9f270844076f77f0add5917ab77f7`
 
-> **Status:** the pool and proof contracts are **written and tested, but not deployed**. What this README says about immutability, the missing owner and admin function, and fees describes the code in `contracts/`; it becomes true on chain once the contracts are deployed and their addresses are published. Until then the app runs the full flow in practice mode: every action is a free wallet signature, no transaction is sent and no real value moves.
+> **Status:** the pool, its proof verifier and their libraries are **deployed and verified on Robinhood Chain**. Their addresses are in `src/config/contracts.ts` and at `/docs/deployments`, and `npm run verify-deployment` checks them against this code. The contracts cannot be upgraded; use amounts you are prepared to lose.
 
 ## The problem
 
@@ -41,14 +41,13 @@ Live now:
 
 - Wallet connection on Robinhood Chain (EIP-6963 browser wallets, WalletConnect when configured); the network is added for you.
 - Live chain readings: latest block, gas price and the Chainlink ETH/USD feed on Robinhood Chain.
-- The app at `/app` in **practice mode**: open a practice account, shroud, hold, send privately and unshroud. Each step is a one-time message signed with `personal_sign`; the server verifies the signature, burns the nonce and applies exactly what was signed. Fees from every visitor's practice actions feed one practice vault, so share value moves only with real practice activity.
+- $OARKEL on `/token`, with a buy card that quotes on chain and sends the swap from your own wallet.
+- The app at `/app` on mainnet: shroud ETH or $OARKEL into the pool, hold it as private notes, send privately and unshroud. Proofs are built in your browser and every transaction is sent from your own wallet.
 - Six interactive research notes at `/research` on metadata leaks around private notes.
 
 Coming later:
 
-- $OARKEL itself (the buy card on `/token` switches on once the address is set).
-- The private pool and its fee vault on mainnet (the app switches from practice to real transactions once the addresses are set in `src/config/contracts.ts`).
-- The automated fee harvester.
+- The automated fee harvester (swept ETH fees bought back as $OARKEL and donated to the vault).
 
 ## Run it locally
 
@@ -115,11 +114,13 @@ tools/              verify-token.mjs
 
 | Contract | Status |
 | --- | --- |
-| $OARKEL (ERC-20, launched on Pons) | Address not published yet |
-| Private pool (OarkelPool), proof verifier (HonkVerifier), libraries | Written and tested, not deployed |
+| $OARKEL (ERC-20, launched on Pons) | `0xb34ceb0a58d9f270844076f77f0add5917ab77f7` |
+| Private pool (OarkelPool) | `0xf65100f07a4bbf57047d774ec683f5b741dd55f2` (block 82546758) |
+| Proof verifier (HonkVerifier) | `0x6d375cd1d74f9391f2306a1aa91639f269fe04a2` |
+| PoseidonT3, PoseidonT4, ZKTranscriptLib, RelationsLib | `0xa09ceb11d309f8c71bed947f85cbe524910ac53f`, `0xa4549b7d8c670a1d0982e8fbeda3c6d553d22f62`, `0x25f4f66a94ab605254df054e0e0259a7a2bfb5e3`, `0xedb415e7c45c75baa05cf869147383aec3083772` |
 | Fee harvester | Planned (operated off-chain) |
 
-Default deploy values: shroud fee 0.25%, private transfer fee 0.10%, flat unshroud fee 0.0005 ETH or 20 $OARKEL, fixed forever at deploy (the constructor refuses anything above 5%). Functions, events, errors and parameters are documented at `/docs/contracts` and `/docs/parameters`; deployed code can be checked with `npm run verify-deployment` and on [Blockscout](https://robinhoodchain.blockscout.com).
+Deployed values: shroud fee 0.25%, private transfer fee 0.10%, flat unshroud fee 0.0005 ETH or 20 $OARKEL, fee address `0x1ed5e92e2b1d007e3646c26e76438ebc9fc2bf99`, fixed forever at deploy (the constructor refuses anything above 5%). Functions, events, errors and parameters are documented at `/docs/contracts` and `/docs/parameters`; deployed code can be checked with `npm run verify-deployment` and on [Blockscout](https://robinhoodchain.blockscout.com).
 
 ## Security and status
 
