@@ -37,6 +37,8 @@ export const SIG = {
   approve: selector("approve(address,uint256)"),
   balanceOf: selector("balanceOf(address)"),
   decimals: selector("decimals()"),
+  swap: selector(`swap(bytes,${ARGS},${EXT})`),
+  buy: selector("buy(uint256,uint256,bytes)"),
 } as const;
 
 /** Event topics (full 32-byte hashes). */
@@ -58,6 +60,32 @@ function encodeSpend(sel: string, proof: string, a: PublicArgs, ext: ExtData) {
 }
 
 export const encodeTransact = (proof: string, a: PublicArgs, ext: ExtData) => encodeSpend(SIG.transact, proof, a, ext);
+/** OarkelSwap.swap: the same arguments as an unshroud, sent to the swap contract. */
+export const encodeSwap = (proof: string, a: PublicArgs, ext: ExtData) => encodeSpend(SIG.swap, proof, a, ext);
+/** OarkelSwap.buy(ownerHash, minTokensOut, encryptedNote), sent with the ETH to spend. */
+export const encodeBuyIntoNote = (ownerHash: bigint, minTokensOut: bigint, encryptedNote: string) =>
+  SIG.buy + word(ownerHash) + word(minTokensOut) + word(3 * 32) + bytesTail(encryptedNote);
+
+/** "OARKEL-SWAP-v1" padded to 16 bytes: the first bytes of a swap-terms blob (OarkelSwap.SWAP_MAGIC). */
+export const SWAP_MAGIC = "4f41524b454c2d535741502d76310000";
+
+export type SwapTerms = {
+  ownerHash: bigint;
+  /** Lowest amount shrouded into the new note: after the submitter's fee, before the pool's shroud fee. */
+  minOut: bigint;
+  /** Unix seconds. */
+  deadline: bigint;
+  /** The only address allowed to land the swap; the zero address lets anyone (the lander is then paid). */
+  submitter: string;
+  /** Wei paid to the submitter out of the swap. */
+  submitterFee: bigint;
+  /** The new note's blinding, encrypted to its owner, with a value of zero (the value is read from the Shrouded event). */
+  encryptedNote: string;
+};
+
+/** Swap terms exactly as OarkelSwap.encodeSwapTerms writes them, for the proof's second encrypted output. */
+export const encodeSwapTerms = (t: SwapTerms) =>
+  "0x" + SWAP_MAGIC + word(t.ownerHash) + word(t.minOut) + word(t.deadline) + addr(t.submitter) + word(t.submitterFee) + word(6 * 32) + bytesTail(t.encryptedNote);
 export const encodeUnshroud = (proof: string, a: PublicArgs, ext: ExtData) => encodeSpend(SIG.unshroud, proof, a, ext);
 export const encodeDonate = (amount: bigint) => SIG.donate + word(amount);
 export const encodeValueOfShares = (shares: bigint) => SIG.valueOfShares + word(shares);

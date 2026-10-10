@@ -15,6 +15,7 @@ const NAMES = [
   ["RelationsLib", "HonkVerifier.sol"],
   ["HonkVerifier", "HonkVerifier.sol"],
   ["OarkelPool", "OarkelPool.sol"],
+  ["OarkelSwap", "OarkelSwap.sol"],
 ];
 
 const flatLinks = (refs) =>

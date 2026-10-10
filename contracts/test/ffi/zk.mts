@@ -42,6 +42,7 @@ if (cmd === "pk") {
     relayerFee: BigInt(j.relayerFee),
     chainId: j.chainId,
     pool: j.pool,
+    swapTerms: j.swapTerms,
   });
   if (j.overrideFee !== undefined) {
     // Negative tests: claim a different transfer fee than the circuit allows (proving must fail).

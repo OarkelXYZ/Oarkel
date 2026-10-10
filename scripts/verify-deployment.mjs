@@ -1,6 +1,6 @@
 // Proves that deployed contracts are exactly this repository's build, with the expected settings.
 //
-//   npm run verify-deployment -- <address> [--kind OarkelPool|HonkVerifier|PoseidonT3|PoseidonT4|ZKTranscriptLib|RelationsLib]
+//   npm run verify-deployment -- <address> [--kind OarkelSwap|OarkelPool|HonkVerifier|PoseidonT3|PoseidonT4|ZKTranscriptLib|RelationsLib]
 //        [--tx <creation tx>] [--rpc <url>]
 //        [--verifier 0x…] [--token 0x…] [--fee-sink 0x…]
 //        [--shroud-bps 25] [--transfer-bps 10] [--flat-eth-wei 500000000000000] [--flat-token <units>]
@@ -37,7 +37,10 @@ if (!target) {
 
 const ART = JSON.parse(readFileSync(new URL("../src/lib/onchain/artifacts.json", import.meta.url), "utf8")).contracts;
 const LIBS = ["PoseidonT3", "PoseidonT4", "ZKTranscriptLib", "RelationsLib"];
-const KINDS = [...LIBS, "HonkVerifier", "OarkelPool"];
+const KINDS = [...LIBS, "HonkVerifier", "OarkelPool", "OarkelSwap"];
+/** Pons V2 launch factory and the Uniswap v4 PoolManager on Robinhood Chain (OarkelSwap's first two arguments). */
+const PONS_FACTORY = "0x7ed598bcef8bd9edd8c97a195c6d13f40801ec7e";
+const V4_POOL_MANAGER = "0x8366a39cc670b4001a1121b8f6a443a643e40951";
 
 const fromConfig = (file, name) => {
   try {
@@ -52,6 +55,7 @@ const EXPECT = {
   verifier: lower(opt("--verifier") || fromConfig("contracts.ts", "VERIFIER")),
   token: lower(opt("--token") || fromConfig("brand.ts", "CA")),
   feeSink: lower(opt("--fee-sink") || fromConfig("contracts.ts", "FEE_SINK")),
+  pool: lower(opt("--pool") || fromConfig("contracts.ts", "POOL")),
   shroudFeeBps: BigInt(opt("--shroud-bps") || 25),
   transferFeeBps: BigInt(opt("--transfer-bps") || 10),
   unshroudFeeEth: BigInt(opt("--flat-eth-wei") || "500000000000000"),
@@ -145,6 +149,7 @@ async function verify(kind, at) {
     for (const [name, want] of Object.entries(ART.HonkVerifier.expectedImmutables)) expectEq(`HonkVerifier.${name}`, BigInt("0x" + m.immutables[name]).toString(), want);
   }
   if (kind === "OarkelPool") await poolSettings(at, m);
+  if (kind === "OarkelSwap") await swapSettings(m);
   return m;
 }
 
@@ -185,6 +190,15 @@ async function poolSettings(at, m) {
   else fail(`tree depth ${depth}, root window ${window}`);
 }
 
+async function swapSettings(m) {
+  const im = m.immutables;
+  expectEq("OarkelSwap.factory (Pons V2)", asAddr(im.factory), PONS_FACTORY);
+  expectEq("OarkelSwap.poolManager (Uniswap v4)", asAddr(im.poolManager), V4_POOL_MANAGER);
+  expectEq("OarkelSwap.pool", asAddr(im.pool), EXPECT.pool);
+  expectEq("OarkelSwap.token ($OARKEL)", asAddr(im.token), EXPECT.token);
+  await verify("OarkelPool", asAddr(im.pool));
+}
+
 async function checkCreation(kind, at, txHash) {
   const tx = await rpc("eth_getTransactionByHash", [txHash]);
   const receipt = await rpc("eth_getTransactionReceipt", [txHash]);
@@ -199,6 +213,13 @@ async function checkCreation(kind, at, txHash) {
   if (!input.startsWith(creation)) return fail("creation input differs from this build's creation code");
   ok("creation input starts with this build's creation code (same library links)");
   const args = input.slice(creation.length);
+  if (kind === "OarkelSwap") {
+    if (args.length !== 3 * 64) return fail(`constructor arguments have ${args.length / 2} bytes, expected ${3 * 32}`);
+    const im = verified.get(at)?.immutables ?? {};
+    return ["factory", "poolManager", "pool"].forEach((name, i) =>
+      im[name] === args.slice(i * 64, (i + 1) * 64) ? ok(`constructor ${name} = deployed ${name}`) : fail(`constructor ${name} differs from the deployed value`),
+    );
+  }
   if (kind !== "OarkelPool") return args.length === 0 ? ok("no constructor arguments") : fail("unexpected constructor arguments");
   if (args.length !== 7 * 64) return fail(`constructor arguments have ${args.length / 2} bytes, expected ${7 * 32}`);
   const w = (i) => args.slice(i * 64, (i + 1) * 64);

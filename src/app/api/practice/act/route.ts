@@ -34,7 +34,7 @@ export async function POST(request: Request) {
           ? await shroud(store, address, action.asset, action.amount)
           : action.kind === "send"
             ? await send(store, address, action.asset, action.amount, action.to)
-            : await unshroud(store, address, action.asset, action.amount, action.to);
+            : await unshroud(store, address, action.asset, action.amount, action.to, action.relayer);
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
   return NextResponse.json(result);
 }

@@ -113,8 +113,7 @@ export const DOCS: Doc[] = [
               or move a note.
             </li>
             <li>
-              <strong>Your wallet, your transactions.</strong> Every shroud, private send and unshroud is sent from your own wallet. No
-              third party handles your proof.
+              <strong>No gas wallet needed.</strong> A relayer can submit transactions for you and take its fee from the note.
             </li>
           </ul>
         ),
@@ -540,6 +539,7 @@ export const DOCS: Doc[] = [
                 ["Shroud fee", "Each deposit into the pool", "Fee vault", "0.25%"],
                 ["Unshroud fee", "Each withdrawal, flat amount", "Fee vault", `0.0005 ETH or 20 ${T}`],
                 ["Private transfer fee", "Value sent to another key inside the pool", "Fee vault", "0.10%"],
+                ["Relayer fee", "Transactions sent through a relayer", "The relayer that paid the gas", "Set by each relayer, ETH only for now"],
               ]}
             />
             <Callout tone="warn">
@@ -601,8 +601,7 @@ export const DOCS: Doc[] = [
               <strong>Let time pass.</strong> The longer a note sits, the more deposits and withdrawals happen around it.
             </li>
             <li>
-              <strong>Mind the sender.</strong> The wallet you connect sends every transaction and pays its gas, so it shows on chain
-              next to each private send and exit. Unshroud to a fresh address rather than back to that wallet.
+              <strong>Use a relayer.</strong> Funding a fresh address with gas from your main wallet reconnects them.
             </li>
             <li>
               <strong>Mind the network layer.</strong> {N} cannot mask your IP address; the RPC you use and the sites you visit can still
@@ -778,10 +777,7 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
             <li>Each published nullifier is computed correctly from its input note.</li>
             <li>Inputs equal outputs plus the public exit amount plus fees, for the same asset.</li>
             <li>Every output commitment is well formed.</li>
-            <li>
-              The recipient, relayer and relayer fee match the transaction, through a hash of that data. This site always submits from
-              your own wallet, so its proofs name no relayer and a relayer fee of zero.
-            </li>
+            <li>The recipient, relayer and relayer fee match the transaction, through a hash of that data.</li>
           </ul>
         ),
       },
@@ -852,49 +848,155 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
 
   /* ---------------------------------------------------------------- */
   {
-    slug: "gas",
+    slug: "swap",
     group: "Protocol",
-    nav: "Gas and your wallet",
-    h1: "Gas and your wallet",
-    lede: "Who sends each transaction, and what that shows on chain.",
-    title: "Gas and Your Wallet",
-    description: `How ${N} transactions are sent: your own wallet submits every shroud, private send and unshroud and pays the gas in ETH, with no extra fee.`,
-    keyword: "privacy pool gas",
+    nav: "Private swaps",
+    h1: "Private swaps",
+    lede: `Trading between ETH and ${T} from your notes into a new note.`,
+    title: "Private Swaps",
+    description: `How ${N} private swaps work: notes leave the pool, trade on Pons and land in a new note in one transaction, with the terms fixed by the proof.`,
+    keyword: "private swap",
     sections: [
       {
-        id: "who",
-        h: "Your wallet sends everything",
+        id: "what",
+        h: "What it does",
         body: (
-          <p>
-            Every shroud, private send, merge and unshroud is a transaction from the wallet you connect. It pays the gas in ETH, the same
-            as any other transaction on {C}. There is no relayer and no service in between, and no fee beyond the pool&apos;s own rates.
-          </p>
-        ),
-      },
-      {
-        id: "proof",
-        h: "What the proof fixes",
-        body: (
-          <p>
-            You build the proof in your browser and your wallet submits it. The recipient and amounts are bound into the proof, so nobody
-            can change where the money goes or how much. The pool contract has a relayer field in each proof; this site always sets it to
-            the zero address with a fee of zero, which lets your own wallet send it.
-          </p>
+          <>
+            <p>
+              A private swap takes ETH or {T} out of your notes, trades it on the {T} Pons market and shrouds the result into a new note of
+              the other asset, all in one transaction. Nothing waits in between, and the swap contract keeps nothing after the transaction.
+            </p>
+            <p>
+              {isAddress(CONTRACTS.swap) ? (
+                <>
+                  The swap contract is <code>{CONTRACTS.swap}</code> on {C}. It has no owner and no admin function.
+                </>
+              ) : (
+                <>The swap contract is written and tested but not deployed yet. The Swap tab appears in the app once it is live.</>
+              )}
+            </p>
+          </>
         ),
       },
       {
         id: "visible",
-        h: "What the sender reveals",
+        h: "What is public and what is not",
+        body: (
+          <ul>
+            <li>Public: the trade itself, its direction and size, like any trade on Pons.</li>
+            <li>Private: which notes paid for it and who owns the new note.</li>
+            <li>
+              The sender: with a relayer, the relayer sends the swap and your wallet does not appear. Without one, your wallet sends it and shows
+              as the sender.
+            </li>
+          </ul>
+        ),
+      },
+      {
+        id: "terms",
+        h: "Terms fixed by the proof",
+        body: (
+          <p>
+            The proof names the swap contract as the only place the notes can go, and carries the swap terms: the owner of the new note, the
+            minimum you accept, a deadline and the relayer&apos;s ETH fee. Change any of them and the proof fails. If the price moves past your
+            minimum or the deadline passes, the whole transaction reverts and your notes stay where they were.
+          </p>
+        ),
+      },
+      {
+        id: "market",
+        h: "Where the trade happens",
+        body: (
+          <ul>
+            <li>Before {T} graduates, on its Pons bonding curve. After, in its Pons Uniswap v4 pool. The contract picks the live one itself.</li>
+            <li>While the token moves from the curve to the pool, swaps pause. A swap the curve cannot fill whole near graduation is refused rather than half-filled.</li>
+            <li>The curve is thin early on, so large swaps move the price. The app shows the expected result and lets you cap the price move.</li>
+          </ul>
+        ),
+      },
+      {
+        id: "fees",
+        h: "Fees",
+        body: (
+          <ul>
+            <li>The pool&apos;s flat unshroud fee on the side you swap from, and its 0.25% shroud fee on the side you receive.</li>
+            <li>Pons&apos; own trading fee on the trade.</li>
+            <li>With a relayer, its operator fee in ETH, taken from the trade.</li>
+          </ul>
+        ),
+      },
+      {
+        id: "buy",
+        h: "Buying straight into a note",
+        body: (
+          <p>
+            You can also buy {T} with ETH from your wallet and have it land directly in a new note. The purchase shows your wallet, as any
+            purchase does; the note it lands in, and what you do with it afterwards, do not.
+          </p>
+        ),
+      },
+    ],
+  },
+
+  /* ---------------------------------------------------------------- */
+  {
+    slug: "relayer",
+    group: "Protocol",
+    nav: "Relayers and gas",
+    h1: "Relayers and gas",
+    lede: "Using the pool without holding ETH for gas.",
+    title: "Relayers and Gas",
+    description: `How ${N} relayers submit private transfers and unshrouds and pay the gas, taking their fee from the note so your exit address needs no ETH.`,
+    keyword: "gasless relayer",
+    sections: [
+      {
+        id: "why",
+        h: "Why gas is a privacy problem",
+        body: (
+          <p>
+            A fresh address cannot send a transaction until it holds ETH for gas, and funding it out of your everyday wallet links the two.
+            Relayers remove that step.
+          </p>
+        ),
+      },
+      {
+        id: "how",
+        h: "How relaying works",
+        body: (
+          <p>
+            You build the proof in your browser with the relayer&apos;s fee written into it, then hand the proof to a relayer. The relayer
+            submits the transaction and pays the gas; the pool pays the relayer its fee out of the spent note. Only the relayer named in the
+            proof can submit it, and it cannot alter where the money goes or how much, because the recipient, the relayer and the fee are
+            all bound into the proof.
+          </p>
+        ),
+      },
+      {
+        id: "open",
+        h: "Anyone can relay",
+        body: (
+          <p>
+            Relaying is permissionless. The relayer software is open source (<code>keeper/</code> in the repository), and anyone can run
+            one and set its own fee, in ETH for now. A spend without a relayer fee can be submitted by anyone, including your own wallet,
+            so if every relayer is down you only lose the gas convenience, never access to your notes.
+          </p>
+        ),
+      },
+      {
+        id: "ours",
+        h: `The ${N} relayer`,
         body: (
           <>
             <p>
-              The sending wallet is public: it shows on chain next to each private send and unshroud. The proof still hides which notes are
-              spent and who owns them, and an unshroud can pay out to any address.
+              The app uses one relayer by default, run by the {N} team at <code>relay.oarkel.xyz</code>. Its fee is an operator fee for
+              sending your transaction: the gas it pays, plus a margin of about 30% to cover gas price swings and failed sends. It is
+              quoted before you prove, in ETH, and paid to the relayer&apos;s own address. It is not a pool fee and does not go to the
+              fee address or the holder buyback.
             </p>
             <ul>
-              <li>Keep a little ETH in the connected wallet for gas.</li>
-              <li>Unshroud to a fresh address rather than back to the wallet that shrouded.</li>
-              <li>The address that receives an unshroud needs no ETH: it only receives.</li>
+              <li>It carries private sends and unshrouds of ETH notes. Spends of {T} notes are sent from your wallet for now.</li>
+              <li>It keeps no request log of IP addresses. An address is written down only when its requests keep ending in reverted transactions.</li>
+              <li>It can refuse or pause. Untick &ldquo;Use a relayer&rdquo; to send from your own wallet with no relayer fee.</li>
             </ul>
           </>
         ),
@@ -1008,13 +1110,13 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
                 ],
                 [
                   <code key="2">transact(proof, args, ext)</code>,
-                  "Anyone with a valid proof (this site: your own wallet)",
+                  "The named relayer, or anyone when no relayer is paid",
                   "Private send: two notes in, two out. Value sent to another key pays the transfer fee, enforced inside the proof",
                 ],
                 [
                   <code key="3">unshroud(proof, args, ext)</code>,
-                  "Anyone with a valid proof (this site: your own wallet)",
-                  "Withdraws to any address, minus the flat fee",
+                  "The named relayer, or anyone when there is no relayer fee",
+                  "Withdraws to any address, minus the flat fee and an optional relayer fee",
                 ],
                 [<code key="4">donate(amount)</code>, "Anyone", `Adds ${T} to the vault backing`],
                 [<code key="5">sweepEthFees()</code>, "Anyone", "Sends accrued ETH fees to the fee address fixed at deploy"],
@@ -1281,6 +1383,7 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
               ["Private transfer fee", "0.10%", "Fixed at deploy"],
               ["Unshroud fee", `0.0005 ETH or 20 ${T}, flat`, "Fixed at deploy"],
               ["Maximum fee", "5% (500 bps)", "Enforced by the constructor"],
+              ["Relayer fee", "Set by each relayer, ETH only for now", "Bound into the proof"],
               ["Merkle tree depth", "24", "In the code"],
               ["Recent roots accepted", "100", "In the code"],
               ["Largest note value", "2^120", "In the code"],
@@ -1302,7 +1405,7 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
     h1: "Glossary",
     lede: `Terms used across the ${N} site and docs.`,
     title: "Glossary",
-    description: `Glossary of ${N} terms: shroud, unshroud, note, commitment, nullifier, root, vault share, viewing key and anonymity set, explained briefly.`,
+    description: `Glossary of ${N} terms: shroud, unshroud, note, commitment, nullifier, root, vault share, relayer, viewing key and anonymity set, explained briefly.`,
     keyword: "privacy glossary",
     sections: [
       {
@@ -1317,6 +1420,7 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
                 ["Exit", "Another word for unshroud: withdrawing value back to an ordinary address."],
                 ["Note", "Private balance entry inside the pool, readable only with the owner's keys."],
                 ["Nullifier", "Revealed on spending; blocks double spends without exposing the note."],
+                ["Relayer", "A service that submits your transaction and pays gas, paid from the note."],
                 ["Root", "Summary hash of every commitment so far; each proof names one."],
                 ["Shielded address", "What you share to receive private payments."],
                 ["Shroud", "Move public value in, receiving a note."],
@@ -1394,7 +1498,7 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
     h1: "Roadmap",
     lede: "The planned sequence. Intentions, not guarantees.",
     title: "Roadmap",
-    description: `The ${N} roadmap: private pool and holder yield first, then private settlement, private swaps and community privacy coins on ${C}.`,
+    description: `The ${N} roadmap: private pool and holder yield first, then relayers and private settlement, private swaps and community privacy coins on ${C}.`,
     keyword: "privacy protocol roadmap",
     sections: [
       {
@@ -1419,9 +1523,10 @@ amount_out = shares_in * (total_backing + 1) / (total_shares + OFFSET)`}</code>
       },
       {
         id: "then",
-        h: "Then: private settlement",
+        h: "Then: relayers and private settlement",
         body: (
           <ul>
+            <li>Public relayers run by anyone with the open-source relayer, so no exit address ever needs gas.</li>
             <li>Payment receipts and scoped viewing keys for business use.</li>
           </ul>
         ),

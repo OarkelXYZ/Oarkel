@@ -98,7 +98,7 @@ export const NOTES: ResearchNote[] = [
         h: "The fix being considered",
         p: [
           "A wallet can refresh notes now and then: a private transfer to itself that produces a new note of the same value. The new note looks like any recent one.",
-          "Refreshes cost a transfer fee and gas, so wallets would do it rarely and at random.",
+          "Refreshes cost a transfer fee and gas, so wallets would do it rarely and at random, ideally through a relayer.",
         ],
       },
     ],

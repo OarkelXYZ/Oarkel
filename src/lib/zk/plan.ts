@@ -53,7 +53,7 @@ export type SpendRequest = {
   tree: MerkleTree;
   /** Optional private payment to another key (value in note units). */
   pay?: { pk: bigint; viewPub: Uint8Array; value: bigint };
-  /** Note units leaving the pool (the unshroud amount; zero for a private send from this site). */
+  /** Note units leaving the pool (unshroud amount, or the relayer's cut of a send). */
   exitValue: bigint;
   feeBps: bigint;
   recipient: string;
@@ -62,6 +62,11 @@ export type SpendRequest = {
   relayerFee: bigint;
   chainId: number;
   pool: string;
+  /**
+   * Swap through OarkelSwap: hex bytes placed as the second encrypted output (the swap terms). The second
+   * output is then a zero-value note and the first one the change; the proof binds the terms.
+   */
+  swapTerms?: string;
 };
 
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -115,12 +120,20 @@ export function buildSpend(req: SpendRequest): SpendPlan {
     outs.push({ pk, value, blinding, commitment: noteCommitment(asset, value, pk, blinding), mine });
     cipher.push(encryptNote(viewPub, asset, value, blinding));
   };
-  if (pay) addOut(pay.pk, pay.viewPub, pay.value, pay.pk === keys.pk);
-  addOut(keys.pk, keys.viewPub, change, true);
-  if (outs.length < 2) addOut(keys.pk, keys.viewPub, 0n, true);
-  if (randomField() & 1n) {
-    outs.reverse();
-    cipher.reverse();
+  if (req.swapTerms !== undefined) {
+    if (pay) throw new Error("A swap cannot also pay a note");
+    if (!/^0x([0-9a-fA-F]{2})+$/.test(req.swapTerms)) throw new Error("Swap terms must be hex bytes");
+    addOut(keys.pk, keys.viewPub, change, true);
+    addOut(keys.pk, keys.viewPub, 0n, true);
+    cipher[1] = req.swapTerms.toLowerCase();
+  } else {
+    if (pay) addOut(pay.pk, pay.viewPub, pay.value, pay.pk === keys.pk);
+    addOut(keys.pk, keys.viewPub, change, true);
+    if (outs.length < 2) addOut(keys.pk, keys.viewPub, 0n, true);
+    if (randomField() & 1n) {
+      outs.reverse();
+      cipher.reverse();
+    }
   }
 
   const ext: ExtData = {

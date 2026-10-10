@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowSquareOut, ArrowsClockwise, Check, Copy } from "@phosphor-icons/react";
 import { AssetPick, Explainer, Panel, Row, Summary, formFrame } from "@/components/app/Screens";
-import { assetId, bpsFee, formatUnitsShort, usePool, type Asset } from "@/components/app/pool/PoolProvider";
+import { assetId, bpsFee, formatUnitsShort, usePool, type Asset, type SwapQuote } from "@/components/app/pool/PoolProvider";
 import { Redact } from "@/components/ui";
 import { useWallet } from "@/components/wallet/WalletProvider";
 import { BRAND, CHAIN, explorerAddress, shortAddress } from "@/config/brand";
@@ -67,11 +67,23 @@ function AmountField({ asset, text, setText, max }: { asset: Asset; text: string
   );
 }
 
-function GasNote() {
+function RelayerToggle({ on, setOn, asset }: { on: boolean; setOn: (v: boolean) => void; asset: Asset }) {
+  const pool = usePool();
+  const relayer = pool.relayer && (asset === "eth" || pool.relayer.acceptsTokenFees) ? pool.relayer : null;
   return (
-    <p className="mt-4 text-[13px] leading-relaxed text-fg-3">
-      Your connected wallet submits this transaction and pays the gas in ETH, so it shows as the sender. The proof hides which notes are spent.
-    </p>
+    <label className="mt-4 flex cursor-pointer items-start gap-3 text-[14.5px]">
+      <input type="checkbox" checked={on && Boolean(relayer)} disabled={!relayer} onChange={(e) => setOn(e.target.checked)} className="mt-1 size-4 accent-[var(--color-fg)]" />
+      <span>
+        <span className="font-semibold">Use a relayer</span>
+        <span className="block text-[13px] text-fg-3">
+          {relayer
+            ? `${shortAddress(relayer.address)} submits the transaction and pays the gas; its fee comes out of your notes. Your wallet does not appear on chain.`
+            : pool.relayer
+              ? `This relayer takes ETH fees only. For ${BRAND.ticker}, your own wallet submits the transaction and pays the gas, which shows that wallet as the sender.`
+              : "No relayer is set up for this site (Settings). Your own wallet will submit the transaction and pay the gas, which shows that wallet as the sender."}
+        </span>
+      </span>
+    </label>
   );
 }
 
@@ -252,11 +264,13 @@ export function RealUnshroud() {
   const [asset, setAsset] = useState<Asset>("eth");
   const [text, setText] = useState("");
   const [to, setTo] = useState("");
+  const [viaRelayer, setViaRelayer] = useState(true);
   if (!address) return null;
   const amount = text ? parseUnits(text, dec(asset)) : null;
   const flat = asset === "eth" ? (pool.params?.unshroudFeeEth ?? 0n) : (pool.params?.unshroudFeeToken ?? 0n);
+  const relayFee = viaRelayer && pool.relayer && asset === "eth" ? BigInt(pool.relayer.feeEthWei) : viaRelayer && pool.relayer?.acceptsTokenFees && pool.relayer.feeTokenUnits ? BigInt(pool.relayer.feeTokenUnits) : 0n;
   const available = pool.privateBalance(asset);
-  const maxOut = available > flat ? available - flat : 0n;
+  const maxOut = available > flat + relayFee ? available - flat - relayFee : 0n;
   const dest = (to.trim() || address).toLowerCase();
   const validTo = /^0x[0-9a-f]{40}$/.test(dest);
   const problem = !text ? null : !amount ? "Enter a number." : amount > maxOut ? "More than your private balance after fees." : !validTo ? "Enter a full 0x address." : null;
@@ -272,10 +286,11 @@ export function RealUnshroud() {
         <span className="text-[14px] text-fg-2">Recipient address</span>
         <input value={to} onChange={(e) => setTo(e.target.value)} placeholder={address} className="field num mt-2 text-[14px]" data-testid="to" />
       </label>
-      <GasNote />
+      <RelayerToggle on={viaRelayer} setOn={setViaRelayer} asset={asset} />
       <Summary
         rows={[
           ["Unshroud fee (flat)", show(asset, flat)],
+          ["Relayer fee", relayFee ? show(asset, relayFee) : "none"],
           ["Recipient gets at least", amount ? show(asset, amount) : "–"],
           ["Visible on chain", "recipient and amount, not the note"],
         ]}
@@ -285,7 +300,7 @@ export function RealUnshroud() {
         type="button"
         disabled={!amount || Boolean(problem) || Boolean(pool.busy) || !pool.synced}
         onClick={async () => {
-          if (amount && (await pool.unshroud(asset, amount, dest))) setText("");
+          if (amount && (await pool.unshroud(asset, amount, dest, viaRelayer))) setText("");
         }}
         className="btn-ink mt-5 h-12 w-full rounded-full font-mono text-[14px]"
         data-testid="submit"
@@ -305,6 +320,174 @@ export function RealUnshroud() {
   );
 }
 
+/* ------------------------------------------------------------- Swap */
+
+const SLIPPAGES = [100, 200, 500];
+const VENUE: Record<string, string> = { curve: "Pons bonding curve", pool: "Pons v4 pool" };
+
+export function RealSwap() {
+  const pool = usePool();
+  const { address, balance } = useWallet();
+  const { dec, show } = useUnits();
+  const [source, setSource] = useState<"notes" | "wallet">("notes");
+  const [from, setFrom] = useState<Asset>("eth");
+  const [text, setText] = useState("");
+  const [slippage, setSlippage] = useState(200);
+  const [viaRelayer, setViaRelayer] = useState(true);
+  const [preview, setPreview] = useState<{ key: string; quote: SwapQuote | null; error: string | null } | null>(null);
+  const fromAsset: Asset = source === "wallet" ? "eth" : from;
+  const to: Asset = fromAsset === "eth" ? "oarkel" : "eth";
+  const amount = text ? parseUnits(text, dec(fromAsset)) : null;
+  const relayerCarries = Boolean(pool.relayer?.swapFeeEthWei);
+  const useRelayer = source === "notes" && viaRelayer;
+  const key = `${source}|${fromAsset}|${amount ?? ""}|${useRelayer}`;
+
+  useEffect(() => {
+    if (!amount || amount <= 0n || source === "wallet") return;
+    let cancelled = false;
+    const t = setTimeout(() => {
+      pool
+        .previewSwap(fromAsset, amount, useRelayer)
+        .then((quote) => !cancelled && setPreview({ key, quote, error: null }))
+        .catch((e: unknown) => !cancelled && setPreview({ key, quote: null, error: e instanceof Error ? e.message : "No price right now." }));
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  if (!address) return null;
+  if (!pool.swapEnabled) {
+    return formFrame(
+      "Swap",
+      `Swap between ETH and ${BRAND.ticker} without the trade pointing back to your notes.`,
+      <p className="text-[14.5px] text-fg-2">Private swaps open once the swap contract is live on {CHAIN.name}.</p>,
+      <Explainer title="Coming next" points={["Your notes leave the pool, are traded on Pons and land in a new note, all in one transaction."]} />,
+    );
+  }
+
+  const available = source === "wallet" ? (balance ? (parseUnits(balance, 18) ?? 0n) : 0n) : pool.privateBalance(fromAsset);
+  const live = preview && preview.key === key ? preview : null;
+  const quote = live?.quote ?? null;
+  const shroudCut = quote ? bpsFee(quote.out, BigInt(pool.params?.shroudFeeBps ?? 25)) : 0n;
+  const flat = fromAsset === "eth" ? (pool.params?.unshroudFeeEth ?? 0n) : (pool.params?.unshroudFeeToken ?? 0n);
+  const problem = !text
+    ? null
+    : !amount
+      ? "Enter a number."
+      : amount > available
+        ? source === "wallet"
+          ? "More than this wallet holds."
+          : "More than your private balance."
+        : useRelayer && !relayerCarries
+          ? "No relayer that carries swaps is available. Untick “Use a relayer” to send it from your wallet."
+          : (live?.error ?? null);
+
+  return formFrame(
+    "Swap",
+    source === "notes"
+      ? `Trade between ETH and ${BRAND.ticker} straight from your notes into a new note. The trade is public; which notes paid for it and who owns the result are not.`
+      : `Buy ${BRAND.ticker} with ETH from this wallet and land it in a new private note. The purchase shows this wallet; what you do with the note afterwards does not.`,
+    <>
+      <div role="radiogroup" aria-label="Pay from" className="inline-grid grid-cols-2 rounded-full bg-card-2 p-1">
+        {(["notes", "wallet"] as const).map((v) => (
+          <button
+            key={v}
+            type="button"
+            role="radio"
+            aria-checked={source === v}
+            onClick={() => setSource(v)}
+            className={`rounded-full px-4 py-1.5 font-mono text-[12.5px] ${source === v ? "bg-fg text-paper" : "text-fg-2 hover:text-fg"}`}
+          >
+            {v === "notes" ? "from notes" : "from wallet"}
+          </button>
+        ))}
+      </div>
+      {source === "notes" ? (
+        <div className="mt-4">
+          <AssetPick value={from} onChange={setFrom} />
+        </div>
+      ) : null}
+      <p className="mt-3 font-mono text-[12.5px] text-fg-3">
+        {NAME[fromAsset]} → private {NAME[to]} note
+      </p>
+      <div className="mt-4">
+        <AmountField asset={fromAsset} text={text} setText={setText} max={available} />
+      </div>
+      <div className="mt-4 flex flex-wrap items-center gap-2 text-[13.5px]">
+        <span className="text-fg-2">Max price move</span>
+        {SLIPPAGES.map((bps) => (
+          <button
+            key={bps}
+            type="button"
+            onClick={() => setSlippage(bps)}
+            aria-pressed={slippage === bps}
+            className={`rounded-full border px-3 py-1 font-mono text-[12px] ${slippage === bps ? "border-fg text-fg" : "border-line text-fg-3 hover:text-fg"}`}
+          >
+            {bps / 100}%
+          </button>
+        ))}
+      </div>
+      {source === "notes" ? (
+        <label className="mt-4 flex cursor-pointer items-start gap-3 text-[14.5px]">
+          <input type="checkbox" checked={viaRelayer} onChange={(e) => setViaRelayer(e.target.checked)} className="mt-1 size-4 accent-[var(--color-fg)]" />
+          <span>
+            <span className="font-semibold">Use a relayer</span>
+            <span className="block text-[13px] text-fg-3">
+              {relayerCarries && pool.relayer
+                ? `${shortAddress(pool.relayer.address)} sends the swap and pays the gas for an ETH fee taken from the trade. Your wallet does not appear on chain.`
+                : "No relayer that carries swaps is set up. Unticked, your own wallet sends the swap and shows as the sender."}
+            </span>
+          </span>
+        </label>
+      ) : null}
+      <Summary
+        rows={
+          source === "notes"
+            ? [
+                ["Market", quote ? VENUE[quote.venue] : "–"],
+                ["Unshroud fee (flat)", show(fromAsset, flat)],
+                ["Relayer fee", quote && quote.carrierFee ? show("eth", quote.carrierFee) : "none"],
+                [`New ${NAME[to]} note, about`, quote ? show(to, quote.out - shroudCut) : "–"],
+                ["Visible on chain", "the trade and its size, not your notes"],
+              ]
+            : [
+                ["Pays", amount ? show("eth", amount) : "–"],
+                ["Shroud fee", `${Number(pool.params?.shroudFeeBps ?? 25) / 100}% of the ${BRAND.ticker}`],
+                ["Visible on chain", "this wallet bought; not the note"],
+              ]
+        }
+      />
+      {problem ? <p className="mt-3 text-[13.5px] text-down">{problem}</p> : null}
+      <button
+        type="button"
+        disabled={!amount || Boolean(problem) || Boolean(pool.busy) || !pool.synced || (source === "notes" && !quote)}
+        onClick={async () => {
+          if (!amount) return;
+          const ok = source === "notes" ? await pool.swap(fromAsset, amount, slippage, useRelayer) : await pool.buyIntoNote(amount, slippage);
+          if (ok) setText("");
+        }}
+        className="btn-ink mt-5 h-12 w-full rounded-full font-mono text-[14px]"
+        data-testid="submit"
+      >
+        {pool.busy ?? (source === "notes" ? `Swap ${NAME[fromAsset]} privately` : `Buy ${BRAND.ticker} into a note`)}
+      </button>
+      <Status />
+    </>,
+    <Explainer
+      title="How a private swap works"
+      points={[
+        "Your notes leave the pool, are traded on Pons and land in a new note, all in one transaction. Nothing is left in between.",
+        "The trade itself is public, like any trade on Pons. Which notes paid for it and who owns the new note are not.",
+        "The proof fixes the minimum you get, the deadline and the relayer fee. If the price moves past your limit, nothing happens and your notes stay put.",
+        "Pons charges its own trading fee on each swap; the pool takes its usual unshroud and shroud fees.",
+      ]}
+    />,
+  );
+}
+
 /* ------------------------------------------------------------- Send */
 
 export function RealSend() {
@@ -313,8 +496,10 @@ export function RealSend() {
   const [asset, setAsset] = useState<Asset>("oarkel");
   const [text, setText] = useState("");
   const [to, setTo] = useState("");
+  const [viaRelayer, setViaRelayer] = useState(true);
   const amount = text ? parseUnits(text, dec(asset)) : null;
   const bps = pool.params?.transferFeeBps ?? 10n;
+  const relayFee = viaRelayer && pool.relayer && asset === "eth" ? BigInt(pool.relayer.feeEthWei) : viaRelayer && pool.relayer?.acceptsTokenFees && pool.relayer.feeTokenUnits ? BigInt(pool.relayer.feeTokenUnits) : 0n;
   const fee = amount ? (asset === "eth" ? transferFeeFor(amount, bps) : pool.state ? transferFeeFor(sharesForAtMost(pool.state, amount), bps) : 0n) : 0n;
   const feeShown = asset === "eth" ? fee : pool.state ? valueOfShares(pool.state, fee) : 0n;
   const available = pool.privateBalance(asset);
@@ -323,7 +508,7 @@ export function RealSend() {
     ? null
     : !amount
       ? "Enter a number."
-      : amount + feeShown > available
+      : amount + feeShown + relayFee > available
         ? "More than your private balance after fees."
         : dest && !/^oarkel:[0-9a-fA-F]{128}$/.test(dest)
           ? "Enter a private address (oarkel:…)."
@@ -336,16 +521,17 @@ export function RealSend() {
     <>
       <AssetPick value={asset} onChange={setAsset} />
       <div className="mt-5">
-        <AmountField asset={asset} text={text} setText={setText} max={(available * 10_000n) / (10_000n + bps)} />
+        <AmountField asset={asset} text={text} setText={setText} max={available > relayFee ? ((available - relayFee) * 10_000n) / (10_000n + bps) : 0n} />
       </div>
       <label className="mt-4 block">
         <span className="text-[14px] text-fg-2">Recipient private address (from their Settings page)</span>
         <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="oarkel:…" className="field num mt-2 text-[14px]" data-testid="to" />
       </label>
-      <GasNote />
+      <RelayerToggle on={viaRelayer} setOn={setViaRelayer} asset={asset} />
       <Summary
         rows={[
           [`Transfer fee (${Number(bps) / 100}%)`, amount ? show(asset, feeShown) : "–"],
+          ["Relayer fee", relayFee ? show(asset, relayFee) : "none"],
           ["Recipient gets a note of", amount ? show(asset, amount) : "–"],
           ["Visible on chain", "that a transfer happened"],
         ]}
@@ -355,7 +541,7 @@ export function RealSend() {
         type="button"
         disabled={!amount || !dest || Boolean(problem) || Boolean(pool.busy) || !pool.synced}
         onClick={async () => {
-          if (amount && (await pool.send(asset, amount, dest))) setText("");
+          if (amount && (await pool.send(asset, amount, dest, viaRelayer))) setText("");
         }}
         className="btn-ink mt-5 h-12 w-full rounded-full font-mono text-[14px]"
         data-testid="submit"
@@ -435,6 +621,7 @@ export function RealSettings() {
   const pool = usePool();
   const { address, walletName, disconnect } = useWallet();
   const [copied, setCopied] = useState<string | null>(null);
+  const [url, setUrl] = useState(pool.relayerUrl);
   const copy = async (text: string, what: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -476,14 +663,24 @@ export function RealSettings() {
           </button>
         </div>
       </Panel>
-      <Panel title="Gas">
+      <Panel title="Relayer">
         <p className="text-[14px] leading-relaxed text-fg-2">
-          Every shroud, private send, merge and unshroud is sent from this wallet, which pays the gas in ETH. There is no relayer and no extra fee.
+          A relayer submits your proof and pays the gas, so your wallet never appears next to a private send or an exit. Anyone can run one
+          (keeper/ in the source). Its fee is bound into the proof; it cannot change the recipient or take more.
         </p>
+        <input value={url} onChange={(e) => setUrl(e.target.value.trim())} placeholder="https://relayer-one.example, https://relayer-two.example" className="field num mt-3 text-[14px]" aria-label="Relayer URLs" />
         <p className="mt-2 text-[12.5px] text-fg-3">
-          This wallet shows on chain as the sender of each of those transactions. The proof still hides which notes are spent, and an
-          unshroud can pay out to any address you choose.
+          Several relayers, comma-separated: the first one that answers is used, the next one when it refuses. If none is available (a relayer
+          can pause itself), untick “Use a relayer” and submit from your own wallet: no relayer fee, your wallet pays the gas.
         </p>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button type="button" onClick={() => pool.setRelayerUrl(url)} className="btn-ghost inline-flex h-9 items-center rounded-full px-4 font-mono text-[12px]">
+            Use this relayer
+          </button>
+          <span className="text-[13px] text-fg-3">
+            {pool.relayer ? `Connected: ${shortAddress(pool.relayer.address)}` : pool.relayerUrl ? "Not reachable" : "None: your wallet submits"}
+          </span>
+        </div>
       </Panel>
       <Panel title="Keys">
         <div className="space-y-3 text-[14.5px] leading-relaxed text-fg-2">

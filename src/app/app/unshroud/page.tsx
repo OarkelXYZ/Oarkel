@@ -7,7 +7,7 @@ import { RealUnshroud } from "@/components/app/pool/RealScreens";
 
 export const metadata: Metadata = pageMeta({
   title: "Unshroud",
-  description: `Unshroud practice notes to any address in the ${BRAND.name} practice app, with a flat exit fee. No real funds move.`,
+  description: `Unshroud practice notes to any address in the ${BRAND.name} practice app, with a flat exit fee and an optional relayer. No real funds move.`,
   path: "/app/unshroud",
   index: false,
 });

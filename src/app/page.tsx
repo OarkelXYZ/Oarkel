@@ -275,7 +275,7 @@ function YieldDiagram() {
 function Uses() {
   const items: [string, string, string][] = [
     ["next", "Private settlement", `Desks and treasuries settle with each other inside the pool on ${CHAIN.name}, then exit only what has to be shown.`],
-    ["next", "Selective disclosure", "Show one payment or one note to an accountant or a counterparty with a read-only viewing key, and nothing else in your history."],
+    ["next", "Gasless exits", "A relayer sends the shroud or unshroud for you and covers gas, taking its fee from the note. The receiving wallet never needs ETH."],
     ["later", "Private swaps", `Swap shrouded value for other ${CHAIN.name} assets with no visible link between what went in and what came out.`],
     ["later", "Launch privacy coins", "New coins launch straight into the shared pool, so every launch grows the crowd that protects everyone already in it."],
   ];
@@ -381,8 +381,8 @@ const GUARANTEES: Guarantee[] = [
     tag: "in the code",
   },
   {
-    title: "Your wallet sends it.",
-    text: "Every shroud, private payment and unshroud is submitted from your own wallet. No third party handles your proof and no extra fee is added; the recipient and amounts are bound into the proof.",
+    title: "A relayer can pay the gas.",
+    text: "A private payment or an unshroud can be sent by a relayer that covers gas and takes its fee from the note, so a fresh address never needs funding first. The fee is bound into the proof.",
     tag: "in the code",
   },
   {

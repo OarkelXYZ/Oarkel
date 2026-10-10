@@ -105,6 +105,8 @@ abstract contract ZkBase is Test {
         address recipient;
         address relayerAddr;
         uint256 relayerFee;
+        /// OarkelSwap terms (hex bytes) for the second encrypted output; empty for ordinary spends.
+        bytes swapTerms;
     }
 
     function prove(SpendInput memory s) internal returns (Spend memory out) {
@@ -152,8 +154,9 @@ abstract contract ZkBase is Test {
             vm.toString(block.chainid),
             ',"pool":"',
             vm.toString(address(pool)),
-            '"}'
+            '"'
         );
+        json = string.concat(json, s.swapTerms.length > 0 ? string.concat(',"swapTerms":"', vm.toString(s.swapTerms), '"') : "", "}");
         string[] memory cmd = new string[](5);
         cmd[0] = "node";
         cmd[1] = "--no-warnings";

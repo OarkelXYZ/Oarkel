@@ -9,7 +9,7 @@
     "start": "next start -p 4910",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "node --no-warnings --test src/lib/ratelimit-memory.test.ts src/lib/netkey.test.ts src/lib/practice/vault.test.ts src/lib/zk/zk.test.ts",
+    "test": "node --no-warnings --test src/lib/ratelimit-memory.test.ts src/lib/netkey.test.ts src/lib/practice/vault.test.ts src/lib/zk/zk.test.ts src/lib/pool/relayFailure.test.ts",
     "verify-token": "node tools/verify-token.mjs",
     "zk:selftest": "node --no-warnings scripts/zk-selftest.ts",
     "verify-deployment": "node scripts/verify-deployment.mjs",

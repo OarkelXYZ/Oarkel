@@ -24,6 +24,7 @@ export async function GET(request: Request) {
     shroudBps: Number(RULES.shroudBps),
     transferBps: Number(RULES.transferBps),
     unshroudFlat: RULES.unshroudFlat,
+    relayerFee: RULES.relayerFee,
     min: RULES.min,
     oarkelPerEth: RULES.oarkelPerEth,
   };

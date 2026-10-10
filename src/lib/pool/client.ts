@@ -1,7 +1,8 @@
 "use client";
 
 import { CHAIN } from "@/config/brand";
-import { CONTRACTS } from "@/config/contracts";
+import { CONTRACTS, RELAYER_MAX_FEE } from "@/config/contracts";
+import { RelayError } from "./relayFailure";
 import { rpc } from "@/lib/rpc";
 import { MerkleTree, decryptNote, noteCommitment, nullifierOf, type NoteKeys } from "@/lib/zk/core";
 import {
@@ -214,3 +215,63 @@ function ask(msg: Record<string, unknown>) {
 /** Loads the prover in the background (circuit, WASM, SRS points). */
 export const warmProver = () => ask({ kind: "warm" }).catch(() => undefined);
 export const prove = (witness: Record<string, unknown>) => ask({ kind: "prove", witness });
+
+/* ------------------------------------------------------------ relayer */
+
+export type RelayerInfo = {
+  address: string;
+  chainId: number;
+  pool: string;
+  feeEthWei: string;
+  acceptsTokenFees?: boolean;
+  feeTokenUnits?: string;
+  /** Fee for carrying a private swap to the swap contract, in wei; absent when the relayer does not carry swaps. */
+  swapFeeEthWei?: string;
+  /** The swap contract this relayer carries swaps to. */
+  swap?: string;
+};
+
+export async function relayerInfo(url: string): Promise<RelayerInfo> {
+  const res = await fetch(`${url.replace(/\/$/, "")}/info`, { cache: "no-store" });
+  if (!res.ok) throw new Error("The relayer did not answer.");
+  const info = (await res.json()) as RelayerInfo;
+  if (info.chainId !== CHAIN.id || info.pool.toLowerCase() !== CONTRACTS.pool.toLowerCase()) throw new Error("That relayer serves a different pool.");
+  if (!/^0x[0-9a-fA-F]{40}$/.test(info.address)) throw new Error("The relayer sent a bad address.");
+  // The quoted fee is paid out of the note, so never take it on trust.
+  const units = (v: unknown) => (typeof v === "string" && /^\d{1,40}$/.test(v) ? BigInt(v) : null);
+  const ethFee = units(info.feeEthWei);
+  if (ethFee === null) throw new Error("The relayer sent a bad fee.");
+  if (ethFee > RELAYER_MAX_FEE.ethWei) throw new Error("That relayer asks more than this site allows (0.002 ETH).");
+  const out: RelayerInfo = { ...info };
+  if (out.acceptsTokenFees) {
+    const tokenFee = units(out.feeTokenUnits);
+    if (tokenFee === null || tokenFee > RELAYER_MAX_FEE.tokens) {
+      out.acceptsTokenFees = false;
+      out.feeTokenUnits = undefined;
+    }
+  }
+  if (out.swapFeeEthWei !== undefined) {
+    // Swaps are carried only to this site's swap contract, for a fee within the same limit.
+    const swapFee = units(out.swapFeeEthWei);
+    const sameSwap = typeof out.swap === "string" && out.swap.toLowerCase() === CONTRACTS.swap.toLowerCase() && CONTRACTS.swap !== "";
+    if (swapFee === null || swapFee > RELAYER_MAX_FEE.ethWei || !sameSwap) out.swapFeeEthWei = undefined;
+  }
+  return out;
+}
+
+export async function relay(url: string, kind: "transact" | "unshroud" | "swap", data: string): Promise<string> {
+  let res: Response;
+  try {
+    res = await fetch(`${url.replace(/\/$/, "")}/relay`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ kind, data }),
+      cache: "no-store",
+    });
+  } catch {
+    throw new RelayError("The relayer could not be reached.", 0);
+  }
+  const body = (await res.json().catch(() => ({}))) as { hash?: string; error?: string };
+  if (!res.ok || !body.hash) throw new RelayError(body.error || "The relayer refused the transaction.", res.ok ? 502 : res.status);
+  return body.hash;
+}

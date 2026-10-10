@@ -301,11 +301,13 @@ export function UnshroudForm() {
   const [asset, setAsset] = useState<Asset>("eth");
   const [text, setText] = useState("");
   const [to, setTo] = useState("");
+  const [relayer, setRelayer] = useState(true);
   if (!view?.account || !address) return null;
   const amount = toMicro(text);
   const fee = view.rules.unshroudFlat[asset];
+  const relay = relayer ? view.rules.relayerFee[asset] : 0;
   const available = view.private[asset];
-  const maxOut = Math.max(0, available - fee);
+  const maxOut = Math.max(0, available - fee - relay);
   const dest = (to.trim() || address).toLowerCase();
   const validTo = /^0x[0-9a-f]{40}$/.test(dest);
   const problem = !text
@@ -331,12 +333,17 @@ export function UnshroudForm() {
         <span className="text-[14px] text-fg-2">Recipient address</span>
         <input value={to} onChange={(e) => setTo(e.target.value)} placeholder={address} className="field num mt-2 text-[14px]" data-testid="to" />
       </label>
-      <p className="mt-4 text-[13px] leading-relaxed text-fg-3">
-        In the real pool your connected wallet submits the exit and pays the gas in ETH. Practice skips the gas.
-      </p>
+      <label className="mt-4 flex cursor-pointer items-start gap-3 text-[14.5px]">
+        <input type="checkbox" checked={relayer} onChange={(e) => setRelayer(e.target.checked)} className="mt-1 size-4 accent-[var(--color-fg)]" />
+        <span>
+          <span className="font-semibold">Use a relayer</span>
+          <span className="block text-[13px] text-fg-3">The relayer pays the gas and takes its fee from the note, so the recipient needs no ETH.</span>
+        </span>
+      </label>
       <Summary
         rows={[
           ["Unshroud fee (flat)", `${fmt(fee, 6)} ${NAME[asset]}`],
+          ["Relayer fee (suggested)", relayer ? `${fmt(relay, 6)} ${NAME[asset]}` : "none"],
           ["Recipient gets", amount ? `${fmt(amount, 6)} ${NAME[asset]}` : "–"],
           ["Visible on chain (real pool)", "recipient and amount, not the note"],
         ]}
@@ -346,7 +353,7 @@ export function UnshroudForm() {
         type="button"
         disabled={!amount || Boolean(problem) || Boolean(busy)}
         onClick={async () => {
-          if (amount && (await act("unshroud", { asset, amount, to: dest }))) setText("");
+          if (amount && (await act("unshroud", { asset, amount, to: dest, relayer }))) setText("");
         }}
         className="btn-ink mt-5 h-12 w-full rounded-full font-mono text-[14px]"
         data-testid="submit"
@@ -521,7 +528,8 @@ function PracticeRates({ view }: { view: PracticeView }) {
       <Row k="Shroud fee" v={`${r.shroudBps / 100}%`} />
       <Row k="Private transfer fee" v={`${r.transferBps / 100}%`} />
       <Row k="Unshroud fee (flat)" v={`${fmt(r.unshroudFlat.eth, 6)} ETH · ${fmt(r.unshroudFlat.oarkel)} ${BRAND.ticker}`} />
-      <p className="mt-3 text-[12.5px] leading-relaxed text-fg-3">Same as the contract defaults the pool will be deployed with, fixed forever at deploy. Gas is paid by your own wallet.</p>
+      <Row k="Relayer fee" v={`${fmt(r.relayerFee.eth, 6)} ETH · ${fmt(r.relayerFee.oarkel)} ${BRAND.ticker}`} />
+      <p className="mt-3 text-[12.5px] leading-relaxed text-fg-3">Same as the contract defaults the pool will be deployed with, fixed forever at deploy. Each relayer sets its own fee; this one is the app&apos;s suggestion.</p>
     </>
   );
 }

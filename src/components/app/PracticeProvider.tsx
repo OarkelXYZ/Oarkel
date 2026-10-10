@@ -25,6 +25,7 @@ export type PracticeView = {
     shroudBps: number;
     transferBps: number;
     unshroudFlat: Record<Asset, number>;
+    relayerFee: Record<Asset, number>;
     min: Record<Asset, number>;
     oarkelPerEth: number;
   };

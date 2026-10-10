@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { BRAND, CHAIN } from "@/config/brand";
-import { CONTRACTS } from "@/config/contracts";
+import { CONTRACTS, RELAYER_URL, swapLive } from "@/config/contracts";
 import { useWallet } from "@/components/wallet/WalletProvider";
 import {
   bpsFee,
@@ -12,6 +12,8 @@ import {
   prove,
   readParams,
   readState,
+  relay,
+  relayerInfo,
   sharesForAtLeast,
   sharesForAtMost,
   simulate,
@@ -23,9 +25,12 @@ import {
   warmProver,
   type MyNote,
   type PoolParams,
+  type RelayerInfo,
 } from "@/lib/pool/client";
+import { RELAYER_PAUSE_MS, RelayFailure, classifyRelayFailure } from "@/lib/pool/relayFailure";
 import { ASSET_ETH, ASSET_TOKEN, decodeAddress, deriveKeys, encodeAddress, encryptNote, keyDomain, keyMessage, ownerHash, randomField, type NoteKeys } from "@/lib/zk/core";
-import { encodeApprove, encodeShroud, encodeTransact, encodeUnshroud, type LeafRecord, type PoolState } from "@/lib/zk/calls";
+import { encodeApprove, encodeBuyIntoNote, encodeShroud, encodeSwap, encodeSwapTerms, encodeTransact, encodeUnshroud, type LeafRecord, type PoolState } from "@/lib/zk/calls";
+import { loadMarket, quote, withSlippage, type Market } from "@/lib/pons";
 import { ZERO_ADDRESS, buildSpend, pickNotes, transferFeeFor, type OwnedNote } from "@/lib/zk/plan";
 
 /*
@@ -33,8 +38,6 @@ import { ZERO_ADDRESS, buildSpend, pickNotes, transferFeeFor, type OwnedNote } f
  * (SIWE message bound to this site) plus an optional passphrase and live only
  * in this component's memory: they are never stored, logged or sent anywhere.
  * Reloading the page forgets them; signing again restores the same keys.
- * Every transaction is submitted by the connected wallet itself: proofs always
- * name the zero address as relayer with a zero relayer fee.
  */
 
 export type Asset = "eth" | "oarkel";
@@ -59,14 +62,33 @@ type Pool = {
   error: string | null;
   notice: { text: string; tx?: string } | null;
   activity: ActivityItem[];
+  relayer: RelayerInfo | null;
+  relayerUrl: string;
+  setRelayerUrl: (url: string) => void;
   shroud: (asset: Asset, amount: bigint) => Promise<boolean>;
-  send: (asset: Asset, amount: bigint, to: string) => Promise<boolean>;
-  unshroud: (asset: Asset, amount: bigint, to: string) => Promise<boolean>;
+  send: (asset: Asset, amount: bigint, to: string, viaRelayer: boolean) => Promise<boolean>;
+  unshroud: (asset: Asset, amount: bigint, to: string, viaRelayer: boolean) => Promise<boolean>;
   merge: (asset: Asset) => Promise<boolean>;
+  /** Quote for swapping `amount` of `from` (taken from notes) into a note of the other asset. Null: swaps are off. */
+  previewSwap: (from: Asset, amount: bigint, viaRelayer: boolean) => Promise<SwapQuote | null>;
+  swap: (from: Asset, amount: bigint, slippageBps: number, viaRelayer: boolean) => Promise<boolean>;
+  /** Buys $OARKEL with ETH from the connected wallet and shrouds it into a new note (the purchase is public). */
+  buyIntoNote: (ethAmount: bigint, slippageBps: number) => Promise<boolean>;
+  swapEnabled: boolean;
   refresh: () => void;
   clear: () => void;
   noteWorth: (n: MyNote) => bigint;
   privateBalance: (a: Asset) => bigint;
+};
+
+export type SwapQuote = {
+  venue: Market["venue"];
+  /** Units leaving the pool for the trade, after the flat unshroud fee. */
+  traded: bigint;
+  /** ETH paid to the relayer for landing the swap (zero when your wallet sends it). */
+  carrierFee: bigint;
+  /** Expected amount shrouded into the new note, before the pool's shroud fee. */
+  out: bigint;
 };
 
 const Ctx = createContext<Pool | null>(null);
@@ -77,6 +99,21 @@ const fmt = (v: bigint, decimals: number, digits = 6) => {
   const frac = s.slice(s.length - decimals).slice(0, digits).replace(/0+$/, "");
   return frac ? `${whole}.${frac}` : whole;
 };
+
+/**
+ * Notes for a relayed spend. A retry reuses exactly the notes of the first proof: the two proofs then share
+ * nullifiers, so a relayer that kept the first one can land at most one of them. Picking afresh could spend
+ * other notes and let both go through.
+ */
+function retryInputs(first: OwnedNote[] | null, mine: OwnedNote[], need: bigint): OwnedNote[] {
+  if (first) {
+    if (first.reduce((sum, n) => sum + n.value, 0n) < need) throw new Error("The new relayer fee no longer fits in the notes of the first proof. Press the button again to start over.");
+    return first;
+  }
+  const picked = pickNotes(mine, need);
+  if (!picked) throw new Error(mine.length > 2 ? "This needs more than two notes. Merge your notes first (button below), then try again." : "Not enough in your private balance for that plus fees.");
+  return picked;
+}
 
 export function PoolProvider({ children }: { children: React.ReactNode }) {
   const { address, signMessage, sendTransaction, refreshBalance } = useWallet();
@@ -93,6 +130,16 @@ export function PoolProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ text: string; tx?: string } | null>(null);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [relayerUrl, setRelayerUrl] = useState(RELAYER_URL);
+  // Relayers that were unreachable or paused, skipped until `until`; the next one in the list is used meanwhile.
+  const [down, setDown] = useState<{ url: string; until: number }[]>([]);
+  const downUrls = down.map((d) => d.url);
+  const downKey = downUrls.join(",");
+  // Bumped to re-read the relayer's quote (its fee follows the gas price).
+  const [relayerRefresh, setRelayerRefresh] = useState(0);
+  const [relayerSeen, setRelayerSeen] = useState<{ list: string; url: string; info: RelayerInfo | null } | null>(null);
+  const relayer = relayerSeen && relayerSeen.list === relayerUrl + "|" + downKey ? relayerSeen.info : null;
+  const activeRelayerUrl = relayer ? (relayerSeen?.url ?? "") : "";
   const [tick, setTick] = useState(0);
 
   const leavesRef = useRef<LeafRecord[]>([]);
@@ -117,6 +164,43 @@ export function PoolProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     readParams().then(setParams).catch(() => setParams(null));
   }, []);
+
+  // A skipped relayer comes back once its pause runs out.
+  useEffect(() => {
+    if (down.length === 0) return;
+    const next = Math.min(...down.map((d) => d.until));
+    const t = setTimeout(() => setDown((d) => d.filter((x) => x.until > Date.now())), Math.max(0, next - Date.now()) + 50);
+    return () => clearTimeout(t);
+  }, [down]);
+
+  // Keep the quoted fee current while the app is open.
+  useEffect(() => {
+    if (!relayerUrl) return;
+    const t = setInterval(() => setRelayerRefresh((n) => n + 1), 60_000);
+    return () => clearInterval(t);
+  }, [relayerUrl]);
+
+  useEffect(() => {
+    const skip = downKey ? downKey.split(",") : [];
+    const urls = relayerUrl.split(",").map((u) => u.trim()).filter((u) => u && !skip.includes(u));
+    const key = relayerUrl + "|" + downKey;
+    let cancelled = false;
+    (async () => {
+      for (const url of urls) {
+        try {
+          const info = await relayerInfo(url);
+          if (!cancelled) setRelayerSeen({ list: key, url, info });
+          return;
+        } catch {
+          // try the next relayer
+        }
+      }
+      if (!cancelled) setRelayerSeen({ list: key, url: "", info: null });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [relayerUrl, downKey, relayerRefresh]);
 
   const log = useCallback((kind: string, text: string, tx?: string) => {
     setActivity((a) => [{ t: Date.now(), kind, text, tx }, ...a].slice(0, 50));
@@ -282,8 +366,23 @@ export function PoolProvider({ children }: { children: React.ReactNode }) {
   /* ---------------------------------------------------------- spends */
 
   const spendNotes = useCallback(
-    async (opts: { asset: Asset; inputs: OwnedNote[]; pay?: { pk: bigint; viewPub: Uint8Array; value: bigint }; exitValue: bigint; recipient: string; kind: "transact" | "unshroud" }) => {
+    async (opts: {
+      asset: Asset;
+      inputs: OwnedNote[];
+      pay?: { pk: bigint; viewPub: Uint8Array; value: bigint };
+      exitValue: bigint;
+      recipient: string;
+      viaRelayer: boolean;
+      relayerFee: bigint;
+      kind: "transact" | "unshroud" | "swap";
+      swapTerms?: string;
+    }) => {
       if (!keys || !params || !address) throw new Error("Unlock your notes first.");
+      const useRelayer = opts.viaRelayer && relayer && activeRelayerUrl;
+      // A swap proof names the swap contract as both recipient and pool relayer (fee of one unit), so the pool takes
+      // it only through that contract. Whoever carries it there is paid by the swap terms instead.
+      const isSwap = opts.kind === "swap";
+      const target = isSwap ? CONTRACTS.swap : CONTRACTS.pool;
       const plan = buildSpend({
         keys,
         asset: assetId(opts.asset),
@@ -293,59 +392,245 @@ export function PoolProvider({ children }: { children: React.ReactNode }) {
         exitValue: opts.exitValue,
         feeBps: params.transferFeeBps,
         recipient: opts.recipient,
-        // Self-submit: no relayer is named and none is paid, so the connected wallet sends the transaction.
-        relayer: ZERO_ADDRESS,
-        relayerFee: 0n,
+        relayer: isSwap ? CONTRACTS.swap : useRelayer ? relayer.address : ZERO_ADDRESS,
+        relayerFee: isSwap ? 1n : useRelayer ? opts.relayerFee : 0n,
         chainId: CHAIN.id,
         pool: CONTRACTS.pool,
+        swapTerms: opts.swapTerms,
       });
       setBusy("Proving on this device…");
       const { proof } = await prove(plan.witness);
-      const data = opts.kind === "transact" ? encodeTransact(proof, plan.args, plan.ext) : encodeUnshroud(proof, plan.args, plan.ext);
-      return submitWallet({ to: CONTRACTS.pool, data });
+      const data =
+        opts.kind === "transact" ? encodeTransact(proof, plan.args, plan.ext) : isSwap ? encodeSwap(proof, plan.args, plan.ext) : encodeUnshroud(proof, plan.args, plan.ext);
+      if (useRelayer) {
+        setBusy("Checking…");
+        await simulate({ from: relayer.address, to: target, data });
+        setBusy("Sending through the relayer…");
+        let hash: string;
+        try {
+          hash = await relay(activeRelayerUrl, opts.kind, data);
+        } catch (cause) {
+          const failure = classifyRelayFailure(cause);
+          // Only an unreachable or paused relayer is set aside. A refusal of this one proof (fee, stale root) is not
+          // the relayer's fault, so it stays in use and the caller may prove again.
+          if (failure === "unavailable") setDown((d) => [...d.filter((x) => x.url !== activeRelayerUrl), { url: activeRelayerUrl, until: Date.now() + RELAYER_PAUSE_MS }]);
+          throw new RelayFailure(cause instanceof Error ? cause.message : "The relayer refused.", failure, activeRelayerUrl);
+        }
+        setBusy("Waiting for the block…");
+        await waitReceipt(hash);
+        return hash;
+      }
+      return submitWallet({ to: target, data });
     },
-    [keys, params, address, submitWallet],
+    [keys, params, address, relayer, activeRelayerUrl, submitWallet],
+  );
+
+  /**
+   * Runs a relayed spend and, when the relayer turned down that one proof (its fee went up with the gas price, or the
+   * tree moved on), asks for a fresh quote and proves once more. A new fee more than a quarter above the one shown is
+   * never paid without the user seeing it: the quote is refreshed on screen and the user presses the button again.
+   */
+  const withRelayRetry = useCallback(
+    async (asset: Asset, viaRelayer: boolean, fee: bigint, attempt: (fee: bigint) => Promise<string>, feeOf?: (info: RelayerInfo) => bigint | null) => {
+      try {
+        return await attempt(fee);
+      } catch (e) {
+        if (!viaRelayer || !(e instanceof RelayFailure)) throw e;
+        if (e.failure === "unavailable") {
+          const others = relayerUrl.split(",").map((u) => u.trim()).filter((u) => u && u !== e.url).length;
+          const meanwhile = others > 0 ? "the next relayer in your list (Settings) is used meanwhile" : "the app tries it again after that";
+          throw new Error(
+            `${e.message} This relayer is skipped for two minutes and ${meanwhile}. To send now, untick “Use a relayer” and submit from your own wallet, which then shows as the sender.`,
+          );
+        }
+        if (e.failure === "final") throw new Error(e.message);
+        const info = await relayerInfo(e.url).catch(() => null);
+        setRelayerRefresh((n) => n + 1);
+        const fresh = !info
+          ? null
+          : feeOf
+            ? feeOf(info)
+            : asset === "eth"
+              ? BigInt(info.feeEthWei)
+              : info.acceptsTokenFees && info.feeTokenUnits
+                ? BigInt(info.feeTokenUnits)
+                : null;
+        if (fresh === null) throw new Error(`${e.message} The relayer did not give a new quote. Try again in a moment.`);
+        if (fresh * 4n > fee * 5n) {
+          const unit = feeOf ? "eth" : asset;
+          throw new Error(`${e.message} Its fee is now ${fmt(fresh, decimals(unit))} ${label(unit)}, up from ${fmt(fee, decimals(unit))}. Check the new fee and press the button again.`);
+        }
+        setBusy("The relayer asked for a fresh proof. Proving again…");
+        return attempt(fresh);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [relayerUrl, params],
+  );
+
+  const relayerFeeFor = useCallback(
+    (asset: Asset, viaRelayer: boolean) => {
+      if (!viaRelayer || !relayer) return 0n;
+      if (asset === "eth") return BigInt(relayer.feeEthWei);
+      return relayer.acceptsTokenFees && relayer.feeTokenUnits ? BigInt(relayer.feeTokenUnits) : 0n;
+    },
+    [relayer],
   );
 
   const unshroud = useCallback(
-    (asset: Asset, amount: bigint, to: string) =>
+    (asset: Asset, amount: bigint, to: string, wantRelayer: boolean) =>
       run(async () => {
+        // A relayer that does not take token fees cannot carry a token spend: the wallet submits it.
+        const viaRelayer = wantRelayer && Boolean(relayer) && (asset === "eth" || Boolean(relayer?.acceptsTokenFees));
         if (!params || !state) throw new Error("Still loading the pool.");
         const flat = asset === "eth" ? params.unshroudFeeEth : params.unshroudFeeToken;
-        const gross = amount + flat;
-        const exitValue = asset === "eth" ? gross : sharesForAtLeast(state, gross);
         const mine = notes.filter((n) => n.asset === assetId(asset));
-        const picked = pickNotes(mine, exitValue);
-        if (!picked) throw new Error(mine.length > 2 ? "This needs more than two notes. Merge your notes first (button below), then try again." : "Not enough in your private balance for that plus fees.");
-        const hash = await spendNotes({ asset, inputs: picked, exitValue, recipient: to, kind: "unshroud" });
+        let inputs: OwnedNote[] | null = null;
+        const hash = await withRelayRetry(asset, viaRelayer, relayerFeeFor(asset, viaRelayer), (fee) => {
+          const gross = amount + flat + fee;
+          const exitValue = asset === "eth" ? gross : sharesForAtLeast(state, gross);
+          inputs = retryInputs(inputs, mine, exitValue);
+          return spendNotes({ asset, inputs, exitValue, recipient: to, viaRelayer, relayerFee: fee, kind: "unshroud" });
+        });
         log("unshroud", `Unshrouded ${fmt(amount, decimals(asset))} ${label(asset)} to ${to.slice(0, 8)}…`, hash);
         setNotice({ text: `Unshrouded ${fmt(amount, decimals(asset))} ${label(asset)}.`, tx: hash });
         return null;
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [run, params, state, notes, spendNotes, log],
+    [run, params, state, notes, relayer, relayerFeeFor, withRelayRetry, spendNotes, log],
   );
 
   const send = useCallback(
-    (asset: Asset, amount: bigint, to: string) =>
+    (asset: Asset, amount: bigint, to: string, wantRelayer: boolean) =>
       run(async () => {
+        // A relayer that does not take token fees cannot carry a token spend: the wallet submits it.
+        const viaRelayer = wantRelayer && Boolean(relayer) && (asset === "eth" || Boolean(relayer?.acceptsTokenFees));
         if (!params || !state || !keys) throw new Error("Still loading the pool.");
         const dest = decodeAddress(to);
         if (!dest) throw new Error("That is not an Oarkel private address (it starts with oarkel:).");
         if (dest.pk === keys.pk) throw new Error("That is your own private address.");
         const payValue = asset === "eth" ? amount : sharesForAtMost(state, amount);
         if (payValue === 0n) throw new Error("That amount is too small.");
-        const need = payValue + transferFeeFor(payValue, params.transferFeeBps);
         const mine = notes.filter((n) => n.asset === assetId(asset));
-        const picked = pickNotes(mine, need);
-        if (!picked) throw new Error(mine.length > 2 ? "This needs more than two notes. Merge your notes first, then try again." : "Not enough in your private balance for that plus fees.");
-        const hash = await spendNotes({ asset, inputs: picked, pay: { pk: dest.pk, viewPub: dest.viewPub, value: payValue }, exitValue: 0n, recipient: ZERO_ADDRESS, kind: "transact" });
+        let inputs: OwnedNote[] | null = null;
+        const hash = await withRelayRetry(asset, viaRelayer, relayerFeeFor(asset, viaRelayer), (fee) => {
+          const exitValue = fee === 0n ? 0n : asset === "eth" ? fee : sharesForAtLeast(state, fee);
+          const need = payValue + transferFeeFor(payValue, params.transferFeeBps) + exitValue;
+          inputs = retryInputs(inputs, mine, need);
+          return spendNotes({ asset, inputs, pay: { pk: dest.pk, viewPub: dest.viewPub, value: payValue }, exitValue, recipient: ZERO_ADDRESS, viaRelayer, relayerFee: fee, kind: "transact" });
+        });
         log("send", `Sent ${fmt(amount, decimals(asset))} ${label(asset)} privately`, hash);
         setNotice({ text: `Sent ${fmt(amount, decimals(asset))} ${label(asset)} privately.`, tx: hash });
         return null;
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [run, params, state, keys, notes, spendNotes, log],
+    [run, params, state, keys, notes, relayer, relayerFeeFor, withRelayRetry, spendNotes, log],
+  );
+
+  /* ---------------------------------------------------------- swaps */
+
+  const swapFeeOf = (info: RelayerInfo | null) => (info?.swapFeeEthWei ? BigInt(info.swapFeeEthWei) : null);
+  const canRelaySwap = Boolean(relayer && swapFeeOf(relayer) !== null);
+
+  /** What leaves the pool for the trade, the carrier's fee and the expected amount into the new note. */
+  const quoteSwap = useCallback(
+    async (from: Asset, amount: bigint, carrierFee: bigint): Promise<SwapQuote> => {
+      if (!params || !state) throw new Error("Still loading the pool.");
+      const market = await loadMarket(CONTRACTS.token);
+      if (market.venue !== "curve" && market.venue !== "pool") {
+        throw new Error(market.venue === "graduating" ? `${BRAND.ticker} is moving to its Pons pool. Swaps reopen once the pool is live.` : "Trading is paused for this token.");
+      }
+      const flat = from === "eth" ? params.unshroudFeeEth : params.unshroudFeeToken;
+      if (amount <= flat) throw new Error("That amount does not cover the unshroud fee.");
+      const traded = amount - flat;
+      if (from === "eth") {
+        if (traded <= carrierFee) throw new Error("That amount does not cover the relayer fee.");
+        return { venue: market.venue, traded, carrierFee, out: await quote(market, true, traded - carrierFee, CONTRACTS.swap) };
+      }
+      const eth = await quote(market, false, traded, CONTRACTS.swap);
+      if (eth <= carrierFee) throw new Error("That amount does not cover the relayer fee.");
+      return { venue: market.venue, traded, carrierFee, out: eth - carrierFee };
+    },
+    [params, state],
+  );
+
+  const previewSwap = useCallback(
+    async (from: Asset, amount: bigint, wantRelayer: boolean) => {
+      if (!swapLive()) return null;
+      const fee = wantRelayer && canRelaySwap ? (swapFeeOf(relayer) as bigint) : 0n;
+      return quoteSwap(from, amount, fee);
+    },
+    [quoteSwap, relayer, canRelaySwap],
+  );
+
+  const swap = useCallback(
+    (from: Asset, amount: bigint, slippageBps: number, wantRelayer: boolean) =>
+      run(async () => {
+        if (!swapLive()) throw new Error("Swaps are not live yet.");
+        if (!params || !state || !keys) throw new Error("Still loading the pool.");
+        // Never fall back to the wallet on its own: that would show the wallet as the sender.
+        if (wantRelayer && !canRelaySwap) throw new Error("No relayer that carries swaps is available. Untick “Use a relayer” to send the swap from your own wallet, which then shows as the sender.");
+        const viaRelayer = wantRelayer;
+        const to: Asset = from === "eth" ? "oarkel" : "eth";
+        const exitValue = from === "eth" ? amount : sharesForAtLeast(state, amount);
+        const mine = notes.filter((n) => n.asset === assetId(from));
+        let inputs: OwnedNote[] | null = null;
+        let landed: SwapQuote | null = null;
+        const hash = await withRelayRetry(
+          "eth",
+          viaRelayer,
+          viaRelayer ? (swapFeeOf(relayer) as bigint) : 0n,
+          async (fee) => {
+            setBusy("Getting a price…");
+            const q = await quoteSwap(from, amount, fee);
+            // Slippage applies to the trade; the carrier's fee is fixed.
+            const minOut = from === "eth" ? withSlippage(q.out, slippageBps) : withSlippage(q.out + fee, slippageBps) - fee;
+            if (minOut <= 0n) throw new Error("That amount is too small to swap.");
+            const blinding = randomField();
+            const terms = encodeSwapTerms({
+              ownerHash: ownerHash(keys.pk, blinding),
+              minOut,
+              deadline: BigInt(Math.floor(Date.now() / 1000) + 600),
+              submitter: viaRelayer && relayer ? relayer.address : ZERO_ADDRESS,
+              submitterFee: fee,
+              // The pool computes the new note's value; the note carries what the wallet needs to find and open it.
+              encryptedNote: encryptNote(keys.viewPub, assetId(to), 0n, blinding),
+            });
+            inputs = retryInputs(inputs, mine, exitValue);
+            landed = q;
+            return spendNotes({ asset: from, inputs, exitValue, recipient: CONTRACTS.swap, viaRelayer, relayerFee: 0n, kind: "swap", swapTerms: terms });
+          },
+          (info) => swapFeeOf(info),
+        );
+        const q = landed as SwapQuote | null;
+        const got = q ? ` for about ${fmt(q.out, decimals(to))} ${label(to)}` : "";
+        log("swap", `Swapped ${fmt(amount, decimals(from))} ${label(from)}${got} privately`, hash);
+        setNotice({ text: `Swapped ${fmt(amount, decimals(from))} ${label(from)}${got}. The new note appears once the block is read.`, tx: hash });
+        return null;
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [run, params, state, keys, notes, relayer, canRelaySwap, quoteSwap, withRelayRetry, spendNotes, log],
+  );
+
+  const buyIntoNote = useCallback(
+    (ethAmount: bigint, slippageBps: number) =>
+      run(async () => {
+        if (!swapLive()) throw new Error("Swaps are not live yet.");
+        if (!keys || !address) throw new Error("Unlock your notes first.");
+        if (ethAmount <= 0n) throw new Error("Enter an amount.");
+        setBusy("Getting a price…");
+        const market = await loadMarket(CONTRACTS.token);
+        if (market.venue !== "curve" && market.venue !== "pool") throw new Error("Trading is paused for this token.");
+        const out = await quote(market, true, ethAmount, CONTRACTS.swap);
+        const blinding = randomField();
+        const data = encodeBuyIntoNote(ownerHash(keys.pk, blinding), withSlippage(out, slippageBps), encryptNote(keys.viewPub, ASSET_TOKEN, 0n, blinding));
+        const hash = await submitWallet({ to: CONTRACTS.swap, data, value: ethAmount });
+        log("buy", `Bought about ${fmt(out, decimals("oarkel"))} ${BRAND.ticker} into a new note`, hash);
+        setNotice({ text: `Bought about ${fmt(out, decimals("oarkel"))} ${BRAND.ticker} into a new private note.`, tx: hash });
+        return null;
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [run, keys, address, submitWallet, log, params],
   );
 
   const merge = useCallback(
@@ -354,7 +639,7 @@ export function PoolProvider({ children }: { children: React.ReactNode }) {
         const mine = notes.filter((n) => n.asset === assetId(asset)).sort((a, b) => (a.value < b.value ? -1 : 1));
         if (mine.length < 2) throw new Error("Nothing to merge.");
         // Merge the two smallest into one note to self: no transfer fee, wallet pays gas.
-        const hash = await spendNotes({ asset, inputs: mine.slice(0, 2), exitValue: 0n, recipient: ZERO_ADDRESS, kind: "transact" });
+        const hash = await spendNotes({ asset, inputs: mine.slice(0, 2), exitValue: 0n, recipient: ZERO_ADDRESS, viaRelayer: false, relayerFee: 0n, kind: "transact" });
         log("merge", `Merged two ${label(asset)} notes`, hash);
         setNotice({ text: "Two notes merged into one.", tx: hash });
         return null;
@@ -384,10 +669,20 @@ export function PoolProvider({ children }: { children: React.ReactNode }) {
     error,
     notice,
     activity,
+    relayer,
+    relayerUrl,
+    setRelayerUrl: (url: string) => {
+      setDown([]);
+      setRelayerUrl(url);
+    },
     shroud,
     send,
     unshroud,
     merge,
+    previewSwap,
+    swap,
+    buyIntoNote,
+    swapEnabled: swapLive(),
     refresh,
     clear,
     noteWorth,
